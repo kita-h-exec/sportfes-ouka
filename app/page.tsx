@@ -1,94 +1,206 @@
+'use client';
+
 import Link from "next/link";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { SplashScreen } from "@/components/SplashScreen";
+import { useEffect, useState, useRef } from "react";
 
-// 残り日数カウンターコンポーネント（ガワ）
+// Animated text components remain unchanged
+const AnimatedChar = ({ char }: { char: string }) => {
+  return (
+    <motion.span
+      className="inline-block"
+      variants={{
+        hidden: { y: "100%", opacity: 0 },
+        visible: { y: 0, opacity: 1 },
+      }}
+      transition={{ type: "spring", damping: 12, stiffness: 200 }}
+    >
+      {char}
+    </motion.span>
+  );
+};
+const AnimatedText = ({ text, className }: { text: string, className?: string }) => {
+  const words = text.split(" ");
+  return (
+    <motion.div
+      className={className}
+      variants={{ 
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
+      }}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.5 }}
+    >
+      {words.map((word, i) => (
+        <span key={i} className="inline-block mr-2">
+          {word.split("").map((char, j) => <AnimatedChar key={j} char={char} />)}
+        </span>
+      ))}
+    </motion.div>
+  );
+};
+
 const CountdownTimer = () => {
-  // ▼▼▼ Directus連携ポイント or 固定値 ▼▼▼
-  // イベント開催日時をここに設定します。
-  // Directusから取得しても良いですし、固定でもOKです。
-  const eventDate = "2024-10-26T09:00:00"; 
+  const eventDate = new Date("2025-10-25T09:00:00");
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
-  // 本来はここで現在時刻との差を計算するロジックが入ります。
-  // 今回はガワなのでダミーの値を表示します。
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const difference = eventDate.getTime() - now.getTime();
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        });
+      } else { clearInterval(timer); }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <div className="bg-white/70 backdrop-blur-sm p-6 rounded-lg shadow-lg text-center">
-      <h2 className="text-xl font-bold mb-2">イベント開催まで</h2>
-      <div className="text-4xl md:text-6xl font-mono font-bold text-indigo-600">
-        <span className="tabular-nums">123</span>日 
-        <span className="tabular-nums">08</span>:
-        <span className="tabular-nums">45</span>:
-        <span className="tabular-nums">32</span>
+    <motion.div 
+      className="glass-effect p-8 rounded-3xl shadow-2xl text-center"
+      initial={{ scale: 0.5, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1, transition: { type: "spring", stiffness: 260, damping: 20, delay: 0.5 } }}
+    >
+      <h2 className="text-2xl font-bold mb-4 text-white/90">運動会開催まで</h2>
+      <div className="text-5xl md:text-7xl font-mono font-extrabold text-white">
+        <span className="tabular-nums tracking-widest">{String(timeLeft.days).padStart(3, '0')}</span><span className="text-2xl mx-1">日</span>
+        <span className="tabular-nums tracking-widest">{String(timeLeft.hours).padStart(2, '0')}</span><span className="text-2xl mx-1">:</span>
+        <span className="tabular-nums tracking-widest">{String(timeLeft.minutes).padStart(2, '0')}</span><span className="text-2xl mx-1">:</span>
+        <span className="tabular-nums tracking-widest">{String(timeLeft.seconds).padStart(2, '0')}</span>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-// 予定表示コンポーネント（ガワ）
+// Schedule preview component remains unchanged
 const SchedulePreview = () => {
-  // ▼▼▼ Directus連携ポイント ▼▼▼
-  // ここでDirectusから「現在の予定」「次の予定」を取得します。
-  const currentSchedule = { // ダミーデータ
-    time: "10:00 - 11:00",
-    title: "開会式",
-    location: "体育館",
-  };
-  const nextSchedule = { // ダミーデータ
-    time: "11:00 - 12:00",
-    title: "吹奏楽部 演奏",
-    location: "ステージ",
-  };
+  const currentSchedule = { time: "10:00 - 11:00", title: "開会式", location: "グラウンド" };
+  const nextSchedule = { time: "11:00 - 12:00", title: "応援合戦", location: "各ブロック応援席" };
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-12">
-      <h2 className="text-2xl font-bold text-center mb-4">現在の予定</h2>
-      <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500 mb-4">
-        <p className="text-sm text-gray-500">{currentSchedule.time} @ {currentSchedule.location}</p>
-        <p className="font-bold text-lg">{currentSchedule.title}</p>
-      </div>
-      <div className="bg-white rounded-lg shadow-md p-4 opacity-70">
-        <p className="text-sm text-gray-500">{nextSchedule.time} @ {nextSchedule.location}</p>
-        <p className="font-bold text-lg">{nextSchedule.title}</p>
-      </div>
-      <p className="text-center mt-4 text-indigo-600 hover:underline">
-        <Link href="/schedule">全ての予定を見る →</Link>
-      </p>
-    </div>
+    <motion.div 
+      className="w-full max-w-4xl mx-auto mt-24"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1, transition: { staggerChildren: 0.3, delayChildren: 0.2 } }}
+      viewport={{ once: true, amount: 0.5 }}
+    >
+      <AnimatedText text="現在のプログラム" className="text-4xl font-bold text-center mb-10" />
+      
+      <motion.div 
+        className="glass-effect rounded-2xl shadow-xl p-6 border-l-4 border-primary mb-8 transform hover:-translate-y-2 transition-transform duration-300"
+        variants={{ hidden: { x: -100, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
+        transition={{ type: 'spring', stiffness: 100 }}
+      >
+        <p className="text-md text-gray-500 dark:text-gray-400">{currentSchedule.time} @ {currentSchedule.location}</p>
+        <p className="font-bold text-2xl mt-2 text-primary dark:text-primary-dark">{currentSchedule.title}</p>
+      </motion.div>
+      
+      <motion.div 
+        className="glass-effect rounded-2xl shadow-lg p-6 opacity-80"
+        variants={{ hidden: { x: 100, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
+        transition={{ type: 'spring', stiffness: 100 }}
+      >
+        <p className="text-md text-gray-500 dark:text-gray-400">次のプログラム: {nextSchedule.time} @ {nextSchedule.location}</p>
+        <p className="font-bold text-2xl mt-2">{nextSchedule.title}</p>
+      </motion.div>
+
+      <motion.div 
+        className="text-center mt-12"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.5 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <Link href="/programs" className="text-secondary dark:text-secondary-dark font-bold text-lg hover:underline transition-all hover:tracking-wider">
+          すべてのプログラムを見る →
+        </Link>
+      </motion.div>
+    </motion.div>
   );
 };
-
 
 export default function HomePage() {
-  // スプラッシュスクリーンはCSSやJSで複雑になるため、今回は省略しています。
-  // 必要であれば、別途コンポーネントとして作成します。
+  const [isSplashActive, setIsSplashActive] = useState(true);
+  const mainRef = useRef(null);
+  const { scrollYProgress } = useScroll({ container: mainRef });
+  const backgroundScale = useTransform(scrollYProgress, [0, 1], [1, 1.5]);
 
   return (
-    <div>
-      {/* 1. メインビジュアルエリア */}
-      <div className="relative h-[60vh] bg-gray-400 flex items-center justify-center">
-        {/* 背景画像はCSSの `background-image` で設定するのがおすすめ */}
-        <img src="https://via.placeholder.com/1200x800" alt="イベントテーマ画像" className="absolute top-0 left-0 w-full h-full object-cover -z-10" />
-        <div className="absolute top-0 left-0 w-full h-full bg-black/30 -z-10"></div>
-        
-        <CountdownTimer />
-      </div>
-
-      {/* 2. コンテンツエリア */}
-      <div className="container mx-auto px-4 py-12">
-        <SchedulePreview />
-        
-        {/* 目次ページへのリンク */}
-        <div className="text-center mt-16">
-          <Link href="/contents" className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-indigo-700 transition-colors">
-            コンテンツ一覧
-          </Link>
-        </div>
-      </div>
+    <>
+      <AnimatePresence>
+        {isSplashActive && (
+          <SplashScreen onAnimationComplete={() => setIsSplashActive(false)} />
+        )}
+      </AnimatePresence>
       
-      {/* 3. 来場者への案内ボタン（右下固定） */}
-      <Link href="/visitors-guide" className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-transform hover:scale-110">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-        </svg>
-      </Link>
-    </div>
+      <motion.div
+        className="bg-background text-foreground min-h-screen overflow-y-auto"
+        ref={mainRef}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isSplashActive ? 0 : 1 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
+        {/* Main Visual Area */}
+        <header className="relative h-screen flex items-center justify-center overflow-hidden">
+          <motion.div 
+            className="absolute top-0 left-0 w-full h-full z-0"
+            style={{ scale: backgroundScale }}
+          >
+            <img src="/splash-background.jpg" alt="運動会のイメージ画像" className="w-full h-full object-cover" />
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-background via-black/50 to-transparent"></div>
+          </motion.div>
+          <div className="relative z-10 flex flex-col items-center">
+            <CountdownTimer />
+            <motion.div 
+              className="mt-12 text-white text-2xl cursor-pointer"
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              onClick={() => document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              ↓
+            </motion.div>
+          </div>
+        </header>
+
+        {/* Contents Area */}
+        <main id="main-content" className="container mx-auto px-4 py-24">
+          <SchedulePreview />
+          
+          <motion.div 
+            className="text-center mt-32"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ type: "spring", duration: 1.5, bounce: 0.5 }}
+          >
+            <Link href="/contents" className="bg-gradient-to-r from-primary to-secondary text-white font-bold py-5 px-12 rounded-full text-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105">
+              すべてのコンテンツ
+            </Link>
+          </motion.div>
+        </main>
+        
+        {/* Floating Action Button */}
+        <motion.div
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: 1, type: 'spring', stiffness: 260, damping: 20 }}
+          whileHover={{ scale: 1.15, rotate: 15 }}
+          className="fixed bottom-8 right-8"
+        >
+          <Link href="/visitors-guide" className="bg-accent text-white p-5 rounded-full shadow-2xl flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+            </svg>
+          </Link>
+        </motion.div>
+      </motion.div>
+    </>
   );
 }

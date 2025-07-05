@@ -1,29 +1,63 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background-light: #f0f2f5;
+  --foreground-light: #1c1e21;
+  --primary-light: #ff4081; /* Vivid Pink */
+  --secondary-light: #7c4dff; /* Deep Purple */
+  --accent-light: #00e5ff; /* Bright Cyan */
+  --surface-light: #ffffff;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background-dark: #18191a;
+  --foreground-dark: #e4e6eb;
+  --primary-dark: #ff80ab; /* Lighter Pink */
+  --secondary-dark: #b39ddb; /* Lighter Purple */
+  --accent-dark: #84ffff; /* Lighter Cyan */
+  --surface-dark: #242526;
+
+  /* Assign default theme (light) */
+  --background: var(--background-light);
+  --foreground: var(--foreground-light);
+  --primary: var(--primary-light);
+  --secondary: var(--secondary-light);
+  --accent: var(--accent-light);
+  --surface: var(--surface-light);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--background-dark);
+    --foreground: var(--foreground-dark);
+    --primary: var(--primary-dark);
+    --secondary: var(--secondary-dark);
+    --accent: var(--accent-dark);
+    --surface: var(--surface-dark);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
 }
+
 html, body {
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* Prevent horizontal scroll caused by animations */
+}
+
+/* Liquid Glass Base Style */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.dark .glass-effect {
+  background: rgba(36, 37, 38, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
