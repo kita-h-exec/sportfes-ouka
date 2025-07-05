@@ -1,76 +1,131 @@
 'use client'
 
 import * as THREE from 'three'
-import { Canvas, useFrame, useLoader } from '@react-three/fiber'
-import { useRef, useMemo } from 'react'
+import { Canvas, useFrame, useLoader, extend } from '@react-three/fiber'
+import { useRef } from 'react'
+import { shaderMaterial } from '@react-three/drei'
+import { type MotionValue } from 'framer-motion'
 
-const vertexShader = `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
+// The final shader, perfecting the balance of fluidity and a high-quality glass look.
+const LiquidGlassFinalMaterial = shaderMaterial(
+  // Uniforms
+  {
+    uTime: 0,
+    uTexture: new THREE.Texture(),
+    uProgress: 0.0,      // Animation progress (0: sphere, 1: plane)
+    uRefraction: 0.95,   // Increased refraction for sharper distortion
+    uDispersion: 0.05,   // A more subtle, refined prism effect
+    uShininess: 80.0,      // A sharp, glassy highlight
+    uFresnelPower: 3.0,  // Emphasizes the reflective edges
+    uNoiseStrength: 0.005, // A very subtle wobble for a liquid feel
+  },
+  // Vertex Shader
+  `
+    varying vec3 v_worldPosition;
+    varying vec2 vUv;
+    varying vec3 v_normal;
+    void main() {
+      vUv = uv;
+      v_normal = normal;
+      vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+      v_worldPosition = worldPosition.xyz;
+      gl_Position = projectionMatrix * viewMatrix * worldPosition;
+    }
+  `,
+  // Fragment Shader
+  `
+    uniform sampler2D uTexture;
+    uniform float uTime;
+    uniform float uProgress;
+    uniform float uRefraction;
+    uniform float uDispersion;
+    uniform float uShininess;
+    uniform float uFresnelPower;
+    uniform float uNoiseStrength;
+    varying vec2 vUv;
+    varying vec3 v_worldPosition;
+    varying vec3 v_normal;
 
-const fragmentShader = `
-  uniform sampler2D uTexture;
-  uniform float uTime;
-  varying vec2 vUv;
+    float smootherstep(float edge0, float edge1, float x) {
+      x = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+      return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+    }
 
-  float noise(vec2 p) {
-    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-  }
+    float noise(vec2 p) {
+      return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+    }
 
-  void main() {
-    vec2 center = vec2(0.5, 0.5);
-    float dist = distance(vUv, center);
-    float waveTime = uTime * 2.0;
-    float waveWidth = 0.2;
-    float wave = smoothstep(waveTime - waveWidth, waveTime, dist) - smoothstep(waveTime, waveTime + waveWidth, dist);
-    float strength = max(0.0, 1.0 - (waveTime / 1.5)) * 0.05;
-    vec2 displacedUv = vUv + normalize(vUv - center) * wave * strength;
-    vec4 color = texture2D(uTexture, displacedUv);
-    color.rgb += noise(vUv * 1000.0) * 0.02;
-    gl_FragColor = color;
-  }
-`;
+    void main() {
+      vec2 uv = vUv;
+      vec2 center = vec2(0.5);
+      float dist = distance(uv, center);
 
-const ShaderPlane = ({ imageUrl }: { imageUrl: string }) => {
-  const meshRef = useRef<THREE.ShaderMaterial>(null!);
-  const texture = useLoader(THREE.TextureLoader, imageUrl);
+      vec3 sphereNormal = normalize(vec3(uv - center, sqrt(max(0.0, 0.25 - dist * dist))));
+      vec3 planeNormal = v_normal;
+      vec3 normal = normalize(mix(sphereNormal, planeNormal, uProgress));
 
-  const uniforms = useMemo(() => ({
-    uTime: { value: 0.0 },
-    uTexture: { value: texture },
-  }), [texture]);
-  
+      vec3 viewDir = normalize(cameraPosition - v_worldPosition);
+      vec3 lightDir = normalize(vec3(0.8, 0.8, 2.5));
+      
+      float fresnel = pow(1.0 - dot(viewDir, normal), uFresnelPower);
+      fresnel = smootherstep(0.0, 1.0, fresnel) * (1.0 - uProgress);
+
+      vec3 halfDir = normalize(lightDir + viewDir);
+      float specular = pow(max(0.0, dot(normal, halfDir)), uShininess);
+      specular *= (1.0 - uProgress);
+      vec3 specularColor = vec3(1.0) * specular;
+
+      float liquidWobble = noise(uv * 10.0 + uTime * 0.2) * uNoiseStrength * (1.0 - uProgress);
+
+      vec2 refractedUvR = uv - (refract(viewDir, normal, uRefraction - uDispersion)).xy * (1.0 - uProgress) * 0.15;
+      vec2 refractedUvG = uv - (refract(viewDir, normal, uRefraction)).xy * (1.0 - uProgress) * 0.15;
+      vec2 refractedUvB = uv - (refract(viewDir, normal, uRefraction + uDispersion)).xy * (1.0 - uProgress) * 0.15;
+
+      vec3 refractedColor = vec3(
+        texture2D(uTexture, refractedUvR + liquidWobble).r,
+        texture2D(uTexture, refractedUvG + liquidWobble).g,
+        texture2D(uTexture, refractedUvB + liquidWobble).b
+      );
+
+      vec3 finalColor = refractedColor + specularColor + (fresnel * 0.4);
+
+      float radius = 0.5 * (1.0 - uProgress);
+      float mask = 1.0 - smootherstep(radius - 0.01, radius, dist);
+      float alpha = mix(mask, 1.0, uProgress);
+
+      gl_FragColor = vec4(finalColor, alpha);
+    }
+  `
+);
+
+extend({ LiquidGlassFinalMaterial });
+
+const ShaderPlane = ({ imageUrl, progress, onReady }: { imageUrl: string, progress: MotionValue<number>, onReady: () => void }) => {
+  const materialRef = useRef<any>(null!);
+  const texture = useLoader(THREE.TextureLoader, imageUrl, onReady);
+
   useFrame(({ clock }) => {
-    if (meshRef.current) {
-        meshRef.current.uniforms.uTime.value = clock.getElapsedTime();
+    if (materialRef.current) {
+      materialRef.current.uTime = clock.getElapsedTime();
+      materialRef.current.uProgress = progress.get();
     }
   });
 
   return (
     <mesh>
-      <planeGeometry args={[10, 10, 32, 32]} />
-      <shaderMaterial
-        ref={meshRef}
-        vertexShader={vertexShader}
-        fragmentShader={fragmentShader}
-        uniforms={uniforms}
-        side={THREE.DoubleSide}
-      />
+      <planeGeometry args={[10, 10, 128, 128]} />
+      {/* @ts-ignore */}
+      <liquidGlassFinalMaterial ref={materialRef} uTexture={texture} transparent={true} />
     </mesh>
   );
 }
 
-export const LiquidEffect = () => {
-  // publicフォルダに置いた画像を指定します
+export const LiquidEffect = ({ progress, onReady }: { progress: MotionValue<number>, onReady: () => void }) => {
   const imageUrl = "/splash-background.jpg"; 
   
   return (
-    <Canvas camera={{ fov: 45, position: [0, 0, 5] }}>
-      <ShaderPlane imageUrl={imageUrl} />
+    <Canvas camera={{ fov: 50, position: [0, 0, 6] }}>
+      <ShaderPlane imageUrl={imageUrl} progress={progress} onReady={onReady} />
     </Canvas>
   );
 };
