@@ -37,7 +37,7 @@ export const SplashScreen = ({ onAnimationComplete }: { onAnimationComplete: () 
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] bg-white dark:bg-background-dark"
+      className="fixed inset-0 z-[100] h-screen w-screen bg-white dark:bg-background-dark"
       // This exit animation will be triggered by AnimatePresence in the parent
       exit={{ opacity: 0, transition: { duration: 0.8 } }}
     >
@@ -55,10 +55,10 @@ export const SplashScreen = ({ onAnimationComplete }: { onAnimationComplete: () 
             exit={{ opacity: 0, transition: { duration: 0.5 } }}
           >
             <h1 className="text-5xl md:text-7xl font-bold text-white drop-shadow-2xl" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
-              最高の思い出を、共に。
+              R7うんどう会「謳花」
             </h1>
             <p className="text-lg text-white/80 mt-4 drop-shadow-lg">
-              運動会へようこそ
+              静岡県立浜松北高等学校
             </p>
           </motion.div>
         )}

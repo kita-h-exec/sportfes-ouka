@@ -4,6 +4,14 @@ import Link from "next/link";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { SplashScreen } from "@/components/SplashScreen";
 import { useEffect, useState, useRef } from "react";
+import { Header } from "@/components/home/Header";
+import { EmergencyBar } from "@/components/home/EmergencyBar";
+import { Schedule } from "@/components/home/Schedule";
+import { Contents } from "@/components/home/Contents";
+import { Blocks } from "@/components/home/Blocks";
+import { createDirectus, rest, readItems } from '@directus/sdk';
+
+// const client = createDirectus('http://localhost:8055').with(rest());
 
 // Animated text components remain unchanged
 const AnimatedChar = ({ char }: { char: string }) => {
@@ -79,58 +87,34 @@ const CountdownTimer = () => {
   );
 };
 
-// Schedule preview component remains unchanged
-const SchedulePreview = () => {
-  const currentSchedule = { time: "10:00 - 11:00", title: "開会式", location: "グラウンド" };
-  const nextSchedule = { time: "11:00 - 12:00", title: "応援合戦", location: "各ブロック応援席" };
 
-  return (
-    <motion.div 
-      className="w-full max-w-4xl mx-auto mt-24"
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1, transition: { staggerChildren: 0.3, delayChildren: 0.2 } }}
-      viewport={{ once: true, amount: 0.5 }}
-    >
-      <AnimatedText text="現在のプログラム" className="text-4xl font-bold text-center mb-10" />
-      
-      <motion.div 
-        className="glass-effect rounded-2xl shadow-xl p-6 border-l-4 border-primary mb-8 transform hover:-translate-y-2 transition-transform duration-300"
-        variants={{ hidden: { x: -100, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
-        transition={{ type: 'spring', stiffness: 100 }}
-      >
-        <p className="text-md text-gray-500 dark:text-gray-400">{currentSchedule.time} @ {currentSchedule.location}</p>
-        <p className="font-bold text-2xl mt-2 text-primary dark:text-primary-dark">{currentSchedule.title}</p>
-      </motion.div>
-      
-      <motion.div 
-        className="glass-effect rounded-2xl shadow-lg p-6 opacity-80"
-        variants={{ hidden: { x: 100, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
-        transition={{ type: 'spring', stiffness: 100 }}
-      >
-        <p className="text-md text-gray-500 dark:text-gray-400">次のプログラム: {nextSchedule.time} @ {nextSchedule.location}</p>
-        <p className="font-bold text-2xl mt-2">{nextSchedule.title}</p>
-      </motion.div>
-
-      <motion.div 
-        className="text-center mt-12"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.5 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-      >
-        <Link href="/programs" className="text-secondary dark:text-secondary-dark font-bold text-lg hover:underline transition-all hover:tracking-wider">
-          すべてのプログラムを見る →
-        </Link>
-      </motion.div>
-    </motion.div>
-  );
-};
 
 export default function HomePage() {
   const [isSplashActive, setIsSplashActive] = useState(true);
+  // const [emergencyMessage, setEmergencyMessage] = useState<string | null>(null);
   const mainRef = useRef(null);
   const { scrollYProgress } = useScroll({ container: mainRef });
   const backgroundScale = useTransform(scrollYProgress, [0, 1], [1, 1.5]);
+
+  // useEffect(() => {
+  //   const fetchEmergencyMessage = async () => {
+  //     try {
+  //       const result = await client.request(
+  //         readItems('emergency', {
+  //           sort: ['-date_created'],
+  //           limit: 1,
+  //         })
+  //       );
+  //       if (result && result.length > 0) {
+  //         setEmergencyMessage(result[0].message);
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to fetch emergency message:', error);
+  //     }
+  //   };
+  // 
+  //   fetchEmergencyMessage();
+  // }, []);
 
   return (
     <>
@@ -140,6 +124,9 @@ export default function HomePage() {
         )}
       </AnimatePresence>
       
+      <Header />
+      <EmergencyBar message={null} />
+
       <motion.div
         className="bg-background text-foreground min-h-screen overflow-y-auto"
         ref={mainRef}
@@ -171,7 +158,9 @@ export default function HomePage() {
 
         {/* Contents Area */}
         <main id="main-content" className="container mx-auto px-4 py-24">
-          <SchedulePreview />
+          <Schedule />
+          <Contents />
+          <Blocks />
           
           <motion.div 
             className="text-center mt-32"

@@ -1,0 +1,121 @@
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) => void, selectedDate: Date }) => {
+  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 8)); // September 2025
+
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+
+  const renderDays = () => {
+    const days = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(<div key={`empty-${i}`} className="p-2"></div>);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
+      const isSelected = selectedDate.toDateString() === date.toDateString();
+      days.push(
+        <motion.div
+          key={i}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          className={`p-2 text-center rounded-lg cursor-pointer transition-colors duration-200 ${isSelected ? 'bg-primary text-white font-bold' : 'hover:bg-primary/20'}`}
+          onClick={() => onDateSelect(date)}
+        >
+          {i}
+        </motion.div>
+      );
+    }
+    return days;
+  };
+
+  return (
+    <motion.div 
+      className="glass-effect p-6 rounded-2xl shadow-xl"
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay: 0.2 }}
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold">{`${currentMonth.getFullYear()}年 ${currentMonth.getMonth() + 1}月`}</h3>
+        {/* Add month navigation if needed */}
+      </div>
+      <div className="grid grid-cols-7 gap-2 text-sm">
+        {['日', '月', '火', '水', '木', '金', '土'].map(day => <div key={day} className="font-bold text-center">{day}</div>)}
+        {renderDays()}
+      </div>
+    </motion.div>
+  );
+};
+
+const ScheduleDisplay = ({ date }: { date: Date }) => {
+  // Placeholder schedule data. Replace with Directus fetch.
+  const schedules: { [key: string]: { time: string, event: string, description: string }[] } = {
+    '2025-09-27': [
+      { time: '09:00', event: '開会式', description: '運動会の始まりです！' },
+      { time: '10:00', event: '100m走', description: '風を切って走れ！' },
+      { time: '11:00', event: '障害物競走', description: '数々の障害を乗り越えろ！' },
+    ],
+    '2025-09-28': [
+      { time: '09:30', event: '玉入れ', description: '心を一つに！' },
+      { time: '10:30', event: '綱引き', description: '力と力のぶつかり合い！' },
+    ],
+  };
+
+  const dateString = date.toISOString().split('T')[0];
+  const scheduleForDate = schedules[dateString] || [];
+
+  return (
+    <motion.div 
+      className="glass-effect p-6 rounded-2xl shadow-xl"
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay: 0.4 }}
+    >
+      <h3 className="text-2xl font-bold mb-4">{date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}の予定</h3>
+      <AnimatePresence mode="wait">
+        <motion.ul
+          key={dateString}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0, transition: { staggerChildren: 0.1 } }}
+          exit={{ opacity: 0, y: -20 }}
+        >
+          {scheduleForDate.length > 0 ? (
+            scheduleForDate.map((item, index) => (
+              <motion.li 
+                key={index} 
+                className="mb-4 p-4 rounded-lg bg-white/10 border-l-4 border-secondary"
+                variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
+              >
+                <p className="font-bold text-lg">{item.event}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{item.time}</p>
+                <p className="text-sm mt-1">{item.description}</p>
+              </motion.li>
+            ))
+          ) : (
+            <p>この日の予定はありません。</p>
+          )}
+        </motion.ul>
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+export const Schedule = () => {
+  const [selectedDate, setSelectedDate] = useState(new Date('2025-09-27'));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1, transition: { staggerChildren: 0.2 } }}
+      viewport={{ once: true, amount: 0.3 }}
+      className="w-full max-w-6xl mx-auto mt-32 grid md:grid-cols-2 gap-12"
+    >
+      <Calendar onDateSelect={setSelectedDate} selectedDate={selectedDate} />
+      <ScheduleDisplay date={selectedDate} />
+    </motion.div>
+  );
+};
