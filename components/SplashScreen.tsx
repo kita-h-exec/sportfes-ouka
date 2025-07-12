@@ -54,11 +54,14 @@ export const SplashScreen = ({ onAnimationComplete }: { onAnimationComplete: () 
             // This exit is for the text itself, fading out before the whole screen
             exit={{ opacity: 0, transition: { duration: 0.5 } }}
           >
-            <h1 className="text-5xl md:text-7xl font-bold text-white drop-shadow-2xl" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
+            <h1 className="hidden md:block text-5xl md:text-7xl font-bold text-white drop-shadow-2xl" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
               R7うんどう会「謳花」
             </h1>
+            <h1 className="block md:hidden text-5xl md:text-7xl font-bold text-white drop-shadow-2xl" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
+              謳花
+            </h1>
             <p className="text-lg text-white/80 mt-4 drop-shadow-lg">
-              静岡県立浜松北高等学校
+              静岡県立浜松北高等学校うんどう会
             </p>
           </motion.div>
         )}
