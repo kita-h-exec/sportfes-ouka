@@ -28,7 +28,16 @@ export const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  });
+  }, [timeLeft]);
+
+  const timerComponents = Object.keys(timeLeft).length ? (
+    <>
+      <div>{timeLeft.days}日</div>
+      <div>{timeLeft.hours}時間</div>
+      <div>{timeLeft.minutes}分</div>
+      <div>{timeLeft.seconds}秒</div>
+    </>
+  ) : null;
 
   return (
     <motion.div
