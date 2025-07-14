@@ -28,30 +28,33 @@ export const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [timeLeft]);
-
-  const timerComponents = Object.keys(timeLeft).length ? (
-    <>
-      <div>{timeLeft.days}日</div>
-      <div>{timeLeft.hours}時間</div>
-      <div>{timeLeft.minutes}分</div>
-      <div>{timeLeft.seconds}秒</div>
-    </>
-  ) : null;
+  });
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1 }}
-      className="text-center p-10 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-xl"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+      className="text-center text-white"
     >
-      <h2 className="text-3xl font-bold mb-4">開催まで</h2>
-      <div className="flex justify-center space-x-4 text-4xl font-mono">
-        <div>{timeLeft.days}日</div>
-        <div>{timeLeft.hours}時間</div>
-        <div>{timeLeft.minutes}分</div>
-        <div>{timeLeft.seconds}秒</div>
+      <h2 className="text-4xl font-bold mb-4 text-shadow-lg">開催まで</h2>
+      <div className="flex justify-center items-center space-x-4 md:space-x-8 text-5xl md:text-7xl font-mono font-bold text-shadow-xl">
+        <div className="flex flex-col items-center">
+          <span className="countdown-number">{timeLeft.days ?? 0}</span>
+          <span className="countdown-label text-lg font-sans">日</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="countdown-number">{timeLeft.hours ?? 0}</span>
+          <span className="countdown-label text-lg font-sans">時間</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="countdown-number">{timeLeft.minutes ?? 0}</span>
+          <span className="countdown-label text-lg font-sans">分</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="countdown-number">{timeLeft.seconds ?? 0}</span>
+          <span className="countdown-label text-lg font-sans">秒</span>
+        </div>
       </div>
     </motion.div>
   );

@@ -20,9 +20,9 @@ const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) =
       days.push(
         <motion.div
           key={i}
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.2)' }}
           whileTap={{ scale: 0.95 }}
-          className={`p-2 text-center rounded-lg cursor-pointer transition-colors duration-200 ${isSelected ? 'bg-primary text-white font-bold' : 'hover:bg-primary/20'}`}
+          className={`p-2 text-center rounded-lg cursor-pointer transition-colors duration-200 ${isSelected ? 'bg-white/80 text-blue-600 font-bold' : 'text-white hover:bg-white/20'}`}
           onClick={() => onDateSelect(date)}
         >
           {i}
@@ -34,17 +34,16 @@ const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) =
 
   return (
     <motion.div 
-      className="glass-effect p-6 rounded-2xl shadow-xl"
+      className="text-white p-6 rounded-2xl"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, delay: 0.2 }}
     >
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold">{`${currentMonth.getFullYear()}年 ${currentMonth.getMonth() + 1}月`}</h3>
-        {/* Add month navigation if needed */}
+        <h3 className="text-2xl font-bold text-shadow-md">{`${currentMonth.getFullYear()}年 ${currentMonth.getMonth() + 1}月`}</h3>
       </div>
       <div className="grid grid-cols-7 gap-2 text-sm">
-        {['日', '月', '火', '水', '木', '金', '土'].map(day => <div key={day} className="font-bold text-center">{day}</div>)}
+        {['日', '月', '火', '水', '木', '金', '土'].map(day => <div key={day} className="font-bold text-center text-shadow-sm">{day}</div>)}
         {renderDays()}
       </div>
     </motion.div>
@@ -52,7 +51,6 @@ const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) =
 };
 
 const ScheduleDisplay = ({ date }: { date: Date }) => {
-  // Placeholder schedule data. Replace with Directus fetch.
   const schedules: { [key: string]: { time: string, event: string, description: string }[] } = {
     '2025-09-27': [
       { time: '09:00', event: '開会式', description: '運動会の始まりです！' },
@@ -70,33 +68,34 @@ const ScheduleDisplay = ({ date }: { date: Date }) => {
 
   return (
     <motion.div 
-      className="glass-effect p-6 rounded-2xl shadow-xl"
+      className="text-white p-6 rounded-2xl"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, delay: 0.4 }}
     >
-      <h3 className="text-2xl font-bold mb-4">{date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}の予定</h3>
+      <h3 className="text-3xl font-bold mb-4 text-shadow-md">{date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}の予定</h3>
       <AnimatePresence mode="wait">
         <motion.ul
           key={dateString}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0, transition: { staggerChildren: 0.1 } }}
           exit={{ opacity: 0, y: -20 }}
+          className="space-y-4"
         >
           {scheduleForDate.length > 0 ? (
             scheduleForDate.map((item, index) => (
               <motion.li 
                 key={index} 
-                className="mb-4 p-4 rounded-lg bg-white/10 border-l-4 border-secondary"
+                className="p-4 rounded-lg bg-black/20 border-l-4 border-fuchsia-400 text-shadow-sm"
                 variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
               >
-                <p className="font-bold text-lg">{item.event}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">{item.time}</p>
-                <p className="text-sm mt-1">{item.description}</p>
+                <p className="font-bold text-xl">{item.event}</p>
+                <p className="text-sm text-gray-200">{item.time}</p>
+                <p className="text-base mt-1">{item.description}</p>
               </motion.li>
             ))
           ) : (
-            <p>この日の予定はありません。</p>
+            <p className="text-shadow-sm">この日の予定はありません。</p>
           )}
         </motion.ul>
       </AnimatePresence>
@@ -112,7 +111,7 @@ export const Schedule = () => {
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1, transition: { staggerChildren: 0.2 } }}
       viewport={{ once: true, amount: 0.3 }}
-      className="w-full max-w-6xl mx-auto mt-32 grid md:grid-cols-2 gap-12"
+      className="w-full max-w-6xl mx-auto mt-20 grid md:grid-cols-2 gap-12"
     >
       <Calendar onDateSelect={setSelectedDate} selectedDate={selectedDate} />
       <ScheduleDisplay date={selectedDate} />

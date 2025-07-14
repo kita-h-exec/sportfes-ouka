@@ -1,89 +1,120 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import Image from 'next/image';
-import { blocks as blocksData } from '@/lib/blocksData';
+import { useParams, notFound } from 'next/navigation';
+import { blocks } from '@/lib/blocksData';
+import Link from 'next/link';
+import { motion, useInView } from 'framer-motion';
+import { useRef } from 'react';
+import BlockNavigation from '@/components/BlockNavigation'; // Import the new component
 
-const BlockPage = () => {
+const BlockDetailPage = () => {
   const params = useParams();
-  const block = blocksData.find((b) => b.id === params.id);
+  const blockId = params.id;
+  
+  const blockIndex = blocks.findIndex((b) => b.id === blockId);
 
-  if (!block) {
-    return <div>Block not found</div>;
+  if (blockIndex === -1) {
+    notFound();
   }
 
-  // To avoid repetition
-  const Text1 = () => (
-    <>
-      <h1 className="text-4xl font-bold">{block.name}</h1>
-      <p className="mt-4">{block.description1}</p>
-    </>
-  );
+  const block = blocks[blockIndex];
 
-  const Text2 = () => (
-    <>
-      <h2 className="text-2xl font-bold">サブタイトル</h2>
-      <p className="mt-2">{block.description2}</p>
-    </>
-  );
+  // Calculate previous and next blocks for navigation
+  const prevBlock = blocks[(blockIndex - 1 + blocks.length) % blocks.length];
+  const nextBlock = blocks[(blockIndex + 1) % blocks.length];
 
-  return (
-    <div>
-      {/* Desktop View */}
-      <div className="hidden md:flex w-full h-screen">
-        <div className="relative w-1/2 h-full">
-          <Image
-            src={block.image1}
-            alt={`${block.name} image 1`}
-            layout="fill"
-            objectFit="cover"
-            className="aspect-[9/16]"
-          />
-          <div className="absolute top-8 left-8 right-8 p-4 rounded-lg bg-black bg-opacity-50 text-white">
-            <Text1 />
-          </div>
+  const Section = ({ image, description, color, textColor, reverse = false }) => {
+    const ref = useRef(null);
+    const isInView = useInView(ref, { once: true, amount: 0.3 });
+
+    const imageVariants = {
+      hidden: { opacity: 0, x: reverse ? 100 : -100, scale: 0.9 },
+      visible: { opacity: 1, x: 0, scale: 1, transition: { duration: 0.9, ease: [0.17, 0.55, 0.55, 1] } },
+    };
+
+    const textVariants = {
+      hidden: { opacity: 0, y: 50 },
+      visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut', delay: 0.2 } },
+    };
+
+    return (
+      <div ref={ref} className="w-full min-h-screen flex flex-col md:flex-row">
+        {/* Mobile Image */}
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={imageVariants}
+          className="md:hidden w-full h-[60vh] flex items-center justify-center shadow-lg"
+          style={{ backgroundColor: color }}
+        >
+          <span className={`text-4xl font-bold ${textColor}`}>{image}</span>
+        </motion.div>
+
+        {/* Desktop Layout */}
+        <div className={`hidden md:flex w-1/2 min-h-screen items-center justify-center ${reverse ? 'md:order-2' : ''}`}>
+            <motion.div
+              initial="hidden"
+              animate={isInView ? 'visible' : 'hidden'}
+              variants={imageVariants}
+              className="w-full h-full flex items-center justify-center shadow-2xl"
+              style={{ backgroundColor: color, aspectRatio: '9/16' }}
+            >
+              <div className="w-full h-full flex items-center justify-center" style={{maxHeight: '100vh'}}>
+                <span className={`text-4xl font-bold ${textColor}`}>{image}</span>
+              </div>
+            </motion.div>
         </div>
-        <div className="relative w-1/2 h-full">
-          <Image
-            src={block.image2}
-            alt={`${block.name} image 2`}
-            layout="fill"
-            objectFit="cover"
-            className="aspect-[9/16]"
-          />
-          <div className="absolute top-8 left-8 right-8 p-4 rounded-lg bg-black bg-opacity-50 text-white">
-            <Text2 />
-          </div>
+
+        <div className={`w-full md:w-1/2 min-h-screen flex items-center justify-center p-8 md:p-12 ${reverse ? 'md:order-1' : ''}`}>
+          <motion.div
+            initial="hidden"
+            animate={isInView ? 'visible' : 'hidden'}
+            variants={textVariants}
+            className="max-w-md text-center md:text-left"
+          >
+            <h2 className="text-4xl font-bold mb-6" style={{ color }}>{description.title}</h2>
+            <p className="text-gray-600 text-lg leading-relaxed">{description.text}</p>
+          </motion.div>
         </div>
       </div>
+    );
+  };
 
-      {/* Mobile View */}
-      <div className="md:hidden">
-        <div className="relative w-full h-[80vh]">
-          <Image
-            src={block.image1}
-            alt={`${block.name} image 1`}
-            layout="fill"
-            objectFit="cover"
-          />
-        </div>
-        <div className="p-4">
-          <Text1 />
-        </div>
-        <div className="relative w-full h-[80vh]">
-          <Image
-            src={block.image2}
-            alt={`${block.name} image 2`}
-            layout="fill"
-            objectFit="cover"
-          />
-        </div>
-        <div className="p-4">
-          <Text2 />
-        </div>
+  return (
+    <div className="bg-white">
+      {/* Add the new navigation component here */}
+      <BlockNavigation prevBlock={prevBlock} nextBlock={nextBlock} />
+
+       <header className="py-12 text-center bg-gray-50">
+        <h1 className="text-6xl font-extrabold" style={{ color: block.color }}>
+          {block.name}
+        </h1>
+      </header>
+
+      <Section
+        image="写真1"
+        description={{ title: "最高の仲間たちと", text: block.description1 }}
+        color={block.color}
+        textColor={block.textColor}
+      />
+      <Section
+        image="写真2"
+        description={{ title: "勝利への軌跡", text: block.description2 }}
+        color={block.color}
+        textColor={block.textColor}
+        reverse={true}
+      />
+
+      {/* Remove the old navigation and add a simple link back to the list */}
+      <div className="text-center py-16 bg-gray-50">
+        <Link href="/blocks">
+          <span className="text-blue-600 hover:bg-blue-100 font-bold py-3 px-6 rounded-full transition-all duration-300">
+            ブロック一覧へ戻る
+          </span>
+        </Link>
       </div>
     </div>
   );
 };
 
-export default BlockPage;
+export default BlockDetailPage;

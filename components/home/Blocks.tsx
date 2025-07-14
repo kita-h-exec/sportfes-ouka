@@ -42,7 +42,7 @@ export const Blocks = () => {
 
   return (
     <div className="w-full max-w-4xl mx-auto mt-24 h-auto flex flex-col items-center justify-center">
-      <h2 className="text-4xl font-bold text-center mb-10">ブロック紹介</h2>
+      <h2 className="text-4xl font-bold text-center mb-10 text-white text-shadow-lg">ブロック紹介</h2>
       <div className="relative w-full md:h-3/4 flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
@@ -65,7 +65,10 @@ export const Blocks = () => {
               }
             }}
             className="relative w-3/4 md:w-auto md:absolute aspect-[9/16] h-full rounded-2xl shadow-2xl flex items-center justify-center cursor-grab active:cursor-grabbing"
-            style={{ backgroundColor: blocks[index].color }}
+            style={{
+              backgroundColor: blocks[index].color,
+              willChange: 'transform',
+            }}
           >
             <Link href={`/blocks/${blocks[index].id}`} passHref className={`w-full h-full flex items-center justify-center ${blocks[index].textColor}`}>
                 <h3 className="text-5xl font-extrabold">{blocks[index].name}</h3>
@@ -73,7 +76,7 @@ export const Blocks = () => {
           </motion.div>
         </AnimatePresence>
         <div className="md:hidden w-3/4 text-center">
-          <h3 className="text-2xl font-bold">{blocks[index].name}</h3>
+          <h3 className="text-2xl font-bold text-white text-shadow-md">{blocks[index].name}</h3>
         </div>
         <button onClick={() => paginate(-1)} className="absolute top-1/2 -translate-y-1/2 left-4 z-10 bg-white/60 rounded-full p-3 hover:bg-white/90 transition-colors">
           <ChevronLeft className="w-8 h-8" />
