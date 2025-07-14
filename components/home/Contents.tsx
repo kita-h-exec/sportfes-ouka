@@ -25,11 +25,11 @@ export const Contents = () => {
         <motion.div
           key={index}
           variants={{ hidden: { opacity: 0, scale: 0.8 }, visible: { opacity: 1, scale: 1 } }}
-          className="glass-effect rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-shadow duration-300"
+          className="bg-black/20 rounded-2xl p-6 text-center shadow-lg hover:shadow-xl hover:bg-black/40 transition-all duration-300"
         >
           <Link href={link.href}>
-            <h3 className="text-2xl font-bold text-primary dark:text-primary-dark">{link.title}</h3>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">{link.description}</p>
+            <h3 className="text-2xl font-bold text-white text-shadow-md">{link.title}</h3>
+            <p className="text-gray-200 mt-2 text-shadow-sm">{link.description}</p>
           </Link>
         </motion.div>
       ))}
