@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # PostgreSQLデータベース
+  postgres:
+    image: postgres:15-alpine
+    container_name: directus_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: directus
+      POSTGRES_USER: directus
+      POSTGRES_PASSWORD: directus_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - directus_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U directus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis（キャッシュ用、オプション）
+  redis:
+    image: redis:7-alpine
+    container_name: directus_redis
+    restart: unless-stopped
+    networks:
+      - directus_network
+    command: redis-server --requirepass redis_password
+
+  # Directus本体
+  directus:
+    image: directus/directus:latest
+    container_name: directus_app
+    restart: unless-stopped
+    ports:
+      - "8055:8055"
+    environment:
+      # セキュリティ設定
+      KEY: "a_very_strong_and_random_key_that_is_long"
+      SECRET: "another_super_long_and_random_secret_value"
+      
+      # 管理者設定
+      ADMIN_EMAIL: "admin@example.com"
+      ADMIN_PASSWORD: "admin123456"
+      
+      # データベース設定
+      DB_CLIENT: "pg"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_DATABASE: "directus"
+      DB_USER: "directus"
+      DB_PASSWORD: "directus_password"
+      
+      # Redis設定（オプション）
+      REDIS: "redis://default:redis_password@redis:6379"
+      CACHE_ENABLED: "true"
+      CACHE_STORE: "redis"
+      
+      # その他の設定
+      PUBLIC_URL: "http://localhost:8055"
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: "*"
+      
+      # ファイルアップロード設定
+      STORAGE_LOCATIONS: "local"
+      STORAGE_LOCAL_DRIVER: "local"
+      STORAGE_LOCAL_ROOT: "./uploads"
+      
+      # メール設定（必要に応じて設定）
+      # EMAIL_FROM: "no-reply@example.com"
+      # EMAIL_TRANSPORT: "smtp"
+      # EMAIL_SMTP_HOST: "smtp.example.com"
+      # EMAIL_SMTP_PORT: "587"
+      # EMAIL_SMTP_USER: "user@example.com"
+      # EMAIL_SMTP_PASSWORD: "password"
+      
+    volumes:
+      - directus_uploads:/directus/uploads
+      - directus_extensions:/directus/extensions
+    networks:
+      - directus_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  postgres_data:
+    driver: local
+  directus_uploads:
+    driver: local
+  directus_extensions:
+    driver: local
+
+networks:
+  directus_network:
+    driver: bridge
