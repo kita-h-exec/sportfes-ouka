@@ -2,18 +2,37 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import directus from '@/lib/directus';
+import { readItems } from '@directus/sdk';
 
-const contentLinks = [
-  { href: '/about', title: 'About', description: 'ご挨拶など' },
-  { href: '/news', title: 'お知らせ', description: '運営からのお知らせ' },
-  { href: '/events', title: '競技', description: '競技一覧' },
-  { href: '/programs', title: 'プログラム', description: '当日のプログラム' },
-  { href: '/blocks', title: 'ブロック紹介', description: '各ブロックの紹介' },
-  { href: '/glossary', title: '用語集', description: '関連リンク' },
-  { href: '/map', title: 'MAP', description: '校内地図・避難経路' },
-];
+interface ContentLink {
+  href: string;
+  title: string;
+  description: string;
+}
+
+async function getContents(): Promise<ContentLink[]> {
+  try {
+    const response = await directus.request(
+      readItems('contents', {
+        fields: ['*'],
+      })
+    );
+    return response as ContentLink[];
+  } catch (error) {
+    console.error("Failed to fetch contents:", error);
+    return [];
+  }
+}
 
 export const Contents = () => {
+  const [contentLinks, setContentLinks] = useState<ContentLink[]>([]);
+
+  useEffect(() => {
+    getContents().then(setContentLinks);
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

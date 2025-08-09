@@ -1,8 +1,10 @@
 'use client'
 
+'use client'
+
 import * as THREE from 'three'
-import { Canvas, useFrame, useLoader, extend } from '@react-three/fiber'
-import { useRef } from 'react'
+import { Canvas, useFrame, extend } from '@react-three/fiber'
+import { useRef, useEffect, useState, Suspense } from 'react'
 import { shaderMaterial } from '@react-three/drei'
 import { type MotionValue } from 'framer-motion'
 
@@ -100,9 +102,8 @@ const LiquidGlassFinalMaterial = shaderMaterial(
 
 extend({ LiquidGlassFinalMaterial });
 
-const ShaderPlane = ({ imageUrl, progress, onReady }: { imageUrl: string, progress: MotionValue<number>, onReady: () => void }) => {
+const ShaderPlane = ({ texture, progress }: { texture: THREE.Texture, progress: MotionValue<number> }) => {
   const materialRef = useRef<any>(null!);
-  const texture = useLoader(THREE.TextureLoader, imageUrl, onReady);
 
   useFrame(({ clock }) => {
     if (materialRef.current) {
@@ -120,12 +121,44 @@ const ShaderPlane = ({ imageUrl, progress, onReady }: { imageUrl: string, progre
   );
 }
 
+const Scene = ({ imageUrl, progress, onReady }: { imageUrl: string, progress: MotionValue<number>, onReady: () => void }) => {
+  const [texture, setTexture] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      imageUrl,
+      (loadedTexture) => {
+        setTexture(loadedTexture);
+        onReady();
+      },
+      undefined, // onProgress callback (optional)
+      (error) => {
+        console.error('An error happened during texture loading:', error);
+        // Fallback: Create a plain white texture
+        const fallbackTexture = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
+        fallbackTexture.needsUpdate = true;
+        setTexture(fallbackTexture);
+        onReady(); // Still call onReady to proceed with the animation
+      }
+    );
+  }, [imageUrl, onReady]);
+
+  if (!texture) {
+    return null; // Or a placeholder loader
+  }
+
+  return <ShaderPlane texture={texture} progress={progress} />;
+}
+
 export const LiquidEffect = ({ progress, onReady }: { progress: MotionValue<number>, onReady: () => void }) => {
   const imageUrl = "/splash-background.jpg"; 
   
   return (
     <Canvas camera={{ fov: 50, position: [0, 0, 6] }}>
-      <ShaderPlane imageUrl={imageUrl} progress={progress} onReady={onReady} />
+      <Suspense fallback={null}>
+        <Scene imageUrl={imageUrl} progress={progress} onReady={onReady} />
+      </Suspense>
     </Canvas>
   );
 };

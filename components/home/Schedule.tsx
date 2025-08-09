@@ -1,7 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import directus from '@/lib/directus';
+import { readItems } from '@directus/sdk';
+
+// データ構造をstart_timeに変更
+interface ScheduleItem {
+  start_time: string; // ISO 8601形式の文字列 (例: "2025-09-27T09:00:00")
+  event: string;
+  description: string;
+}
 
 const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) => void, selectedDate: Date }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(2025, 8)); // September 2025
@@ -50,21 +59,18 @@ const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) =
   );
 };
 
-const ScheduleDisplay = ({ date }: { date: Date }) => {
-  const schedules: { [key: string]: { time: string, event: string, description: string }[] } = {
-    '2025-09-27': [
-      { time: '09:00', event: '開会式', description: '運動会の始まりです！' },
-      { time: '10:00', event: '100m走', description: '風を切って走れ！' },
-      { time: '11:00', event: '障害物競走', description: '数々の障害を乗り越えろ！' },
-    ],
-    '2025-09-28': [
-      { time: '09:30', event: '玉入れ', description: '心を一つに！' },
-      { time: '10:30', event: '綱引き', description: '力と力のぶつかり合い！' },
-    ],
-  };
+const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleItem[] }) => {
+  // 選択された日付の予定をフィルタリング
+  const scheduleForDate = schedules.filter(item => {
+    const itemDate = new Date(item.start_time);
+    return itemDate.toDateString() === date.toDateString();
+  });
 
-  const dateString = date.toISOString().split('T')[0];
-  const scheduleForDate = schedules[dateString] || [];
+  // 時刻をフォーマットするヘルパー関数
+  const formatTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
 
   return (
     <motion.div 
@@ -76,7 +82,7 @@ const ScheduleDisplay = ({ date }: { date: Date }) => {
       <h3 className="text-3xl font-bold mb-4 text-shadow-md">{date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}の予定</h3>
       <AnimatePresence mode="wait">
         <motion.ul
-          key={dateString}
+          key={date.toISOString()} // keyをユニークにする
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0, transition: { staggerChildren: 0.1 } }}
           exit={{ opacity: 0, y: -20 }}
@@ -90,7 +96,8 @@ const ScheduleDisplay = ({ date }: { date: Date }) => {
                 variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
               >
                 <p className="font-bold text-xl">{item.event}</p>
-                <p className="text-sm text-gray-200">{item.time}</p>
+                {/* start_timeから時刻をフォーマットして表示 */}
+                <p className="text-sm text-gray-200">{formatTime(item.start_time)}</p>
                 <p className="text-base mt-1">{item.description}</p>
               </motion.li>
             ))
@@ -103,8 +110,29 @@ const ScheduleDisplay = ({ date }: { date: Date }) => {
   );
 };
 
+// Directusから取得するデータを修正
+async function getSchedules(): Promise<ScheduleItem[]> {
+  try {
+    const response = await directus.request(
+      readItems('schedules', {
+        fields: ['start_time', 'event', 'description'],
+        sort: ['sort'], // 手動並び替えフィールド 'sort' でソート
+      })
+    );
+    return response as ScheduleItem[];
+  } catch (error) {
+    console.error("Failed to fetch schedules:", error);
+    return [];
+  }
+}
+
 export const Schedule = () => {
   const [selectedDate, setSelectedDate] = useState(new Date('2025-09-27'));
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+
+  useEffect(() => {
+    getSchedules().then(setSchedules);
+  }, []);
 
   return (
     <motion.div
@@ -114,7 +142,7 @@ export const Schedule = () => {
       className="w-full max-w-6xl mx-auto mt-20 grid md:grid-cols-2 gap-12"
     >
       <Calendar onDateSelect={setSelectedDate} selectedDate={selectedDate} />
-      <ScheduleDisplay date={selectedDate} />
+      <ScheduleDisplay date={selectedDate} schedules={schedules} />
     </motion.div>
   );
 };
