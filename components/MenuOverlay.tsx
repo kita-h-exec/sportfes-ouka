@@ -1,15 +1,14 @@
-
 'use client';
 
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMenu } from '@/components/useMenu'; // useMenuフックをインポート
 
-interface MenuOverlayProps {
-  isOpen: boolean;
-  toggleMenu: () => void;
-}
+// propsを受け取らないように変更
+const MenuOverlay = () => {
+  // useMenuフックを直接呼び出す
+  const { isMenuOpen, toggleMenu } = useMenu();
 
-const MenuOverlay = ({ isOpen, toggleMenu }: MenuOverlayProps) => {
   const menuVariants = {
     hidden: { opacity: 0, transition: { duration: 0.3, ease: 'easeInOut' } },
     visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeInOut' } },
@@ -33,7 +32,7 @@ const MenuOverlay = ({ isOpen, toggleMenu }: MenuOverlayProps) => {
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isMenuOpen && (
         <motion.div
           variants={menuVariants}
           initial="hidden"

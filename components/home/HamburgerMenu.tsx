@@ -1,13 +1,18 @@
 'use client';
 
+import { useMenu } from '@/components/useMenu';
+
+// isScrolledのみを受け取るように変更
 interface HamburgerMenuProps {
-  isOpen: boolean;
-  toggleMenu: () => void;
-  isScrolled: boolean; // isScrolled を受け取る
+  isScrolled: boolean;
 }
 
-const HamburgerMenu = ({ isOpen, toggleMenu, isScrolled }: HamburgerMenuProps) => {
-  const iconColor = isScrolled ? "text-gray-800" : "text-white";
+const HamburgerMenu = ({ isScrolled }: HamburgerMenuProps) => {
+  // useMenuフックを直接呼び出す
+  const { isMenuOpen, toggleMenu } = useMenu();
+
+  // isMenuOpenも色の判定に加える
+  const iconColor = isScrolled || isMenuOpen ? "text-gray-800" : "text-white";
 
   return (
     <button 
@@ -16,7 +21,7 @@ const HamburgerMenu = ({ isOpen, toggleMenu, isScrolled }: HamburgerMenuProps) =
       aria-label="メニューを開閉する"
     >
       <svg className={`w-6 h-6 ${iconColor} transition-colors duration-300`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        {isOpen ? (
+        {isMenuOpen ? (
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         ) : (
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />

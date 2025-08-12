@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useContext } from 'react';
+import { MenuContext } from '@/lib/MenuContext';
 
 export const useMenu = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const toggleMenu = useCallback(() => {
-    setIsMenuOpen(prev => !prev);
-  }, []);
-
-  return { isMenuOpen, toggleMenu };
+  const context = useContext(MenuContext);
+  if (context === undefined) {
+    throw new Error('useMenu must be used within a MenuProvider');
+  }
+  return context;
 };
