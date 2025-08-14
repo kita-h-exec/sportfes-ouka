@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -31,7 +31,14 @@ const variants = {
   },
 };
 
-export const Blocks = ({ blocks }) => {
+interface Block {
+  block_id: number;
+  name: string;
+  color: string;
+  textColor: string;
+}
+
+export const Blocks = ({ blocks }: { blocks: Block[] }) => {
   const [[page, direction], setPage] = useState([0, 0]);
 
   if (!blocks || blocks.length === 0) {

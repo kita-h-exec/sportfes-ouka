@@ -18,7 +18,16 @@ interface Block {
   description2_text: string;
 }
 
-const Section = ({ imageSrc, title, text, color, textColor, reverse = false }) => {
+interface SectionProps {
+  imageSrc: string;
+  title: string;
+  text: string;
+  color: string;
+  textColor: string;
+  reverse?: boolean;
+}
+
+const Section = ({ imageSrc, title, text, color, textColor, reverse = false }: SectionProps) => {
   return (
     <div className="w-full min-h-screen flex flex-col md:flex-row">
       <div className="md:hidden w-full h-[60vh] flex items-center justify-center shadow-lg relative" style={{ backgroundColor: color }}>
@@ -33,7 +42,7 @@ const Section = ({ imageSrc, title, text, color, textColor, reverse = false }) =
       </div>
       <div className={`w-full md:w-1/2 min-h-screen flex items-center justify-center p-8 md:p-12 ${reverse ? 'md:order-1' : ''}`}>
         <div className="max-w-md text-center md:text-left">
-          <h2 className="text-4xl font-bold mb-6" style={{ color }}>{title}</h2>
+          <h2 className="text-4xl font-bold mb-6" style={{ color: textColor || color }}>{title}</h2>
           <p className="text-gray-600 text-lg leading-relaxed">{text}</p>
         </div>
       </div>
@@ -87,10 +96,11 @@ async function BlockContent({ idString }: { idString: string }) {
   );
 }
 
-const BlockDetailPage = async ({ params }: { params: { id: string } }) => {
+const BlockDetailPage = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <BlockContent idString={params.id} />
+      <BlockContent idString={id} />
     </Suspense>
   );
 };

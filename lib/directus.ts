@@ -41,8 +41,7 @@ export const fetchEmergencyMessage = async () => {
           },
         },
         limit: 1,
-      }),
-      { cache: 'no-store' } // ★追加: キャッシュを無効化
+      })
     );
 
     console.log('Directus response for emergency message:', response);
