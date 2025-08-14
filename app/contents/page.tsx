@@ -7,7 +7,7 @@ const LinkCard = ({ href, title, description, icon }: { href: string; title: str
   return (
     <motion.div
       whileHover={{ y: -8, scale: 1.03 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
       className="glass-effect rounded-2xl"
     >
       <Link href={href} className="aspect-square p-5 flex flex-col justify-between items-center text-center">
@@ -51,7 +51,7 @@ export default function ContentsPage() {
       opacity: 1,
       scale: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 100,
       },
     },

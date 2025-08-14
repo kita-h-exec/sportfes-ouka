@@ -17,10 +17,12 @@ const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) =
 
   // selectedDateが変更された場合、カレンダーの表示月を更新する
   useEffect(() => {
-    if (selectedDate.getFullYear() !== currentMonth.getFullYear() || selectedDate.getMonth() !== currentMonth.getMonth()) {
-      setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth()));
+    const newMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth());
+    if (newMonth.getTime() !== currentMonth.getTime()) {
+      setCurrentMonth(newMonth);
     }
-  }, [selectedDate]); // ★無限ループの原因だったcurrentMonthを依存配列から削除
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]); // currentMonthを依存配列に含めると無限ループになるため除外
 
   const changeMonth = (offset: number) => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));

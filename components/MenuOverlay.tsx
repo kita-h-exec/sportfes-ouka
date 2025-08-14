@@ -10,8 +10,8 @@ const MenuOverlay = () => {
   const { isMenuOpen, toggleMenu } = useMenu();
 
   const menuVariants = {
-    hidden: { opacity: 0, transition: { duration: 0.3, ease: 'easeInOut' } },
-    visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeInOut' } },
+    hidden: { opacity: 0, transition: { duration: 0.3, ease: "easeInOut" as const } },
+    visible: { opacity: 1, transition: { duration: 0.3, ease: "easeInOut" as const } },
   };
 
   const linkContainerVariants = {
@@ -27,7 +27,7 @@ const MenuOverlay = () => {
 
   const linkVariants = {
     hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" as const } },
   };
 
   return (

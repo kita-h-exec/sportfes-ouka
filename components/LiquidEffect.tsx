@@ -103,19 +103,19 @@ const LiquidGlassFinalMaterial = shaderMaterial(
 extend({ LiquidGlassFinalMaterial });
 
 const ShaderPlane = ({ texture, progress }: { texture: THREE.Texture, progress: MotionValue<number> }) => {
-  const materialRef = useRef<any>(null!);
+  const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
   useFrame(({ clock }) => {
     if (materialRef.current) {
-      materialRef.current.uTime = clock.getElapsedTime();
-      materialRef.current.uProgress = progress.get();
+      materialRef.current.uniforms.uTime.value = clock.getElapsedTime();
+      materialRef.current.uniforms.uProgress.value = progress.get();
     }
   });
 
   return (
     <mesh>
       <planeGeometry args={[10, 10, 128, 128]} />
-      {/* @ts-ignore */}
+      {/* @ts-expect-error - Custom shader material type not recognized by TypeScript */}
       <liquidGlassFinalMaterial ref={materialRef} uTexture={texture} transparent={true} />
     </mesh>
   );
