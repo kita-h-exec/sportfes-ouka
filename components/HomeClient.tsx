@@ -9,7 +9,14 @@ import { Contents } from "@/components/home/Contents";
 import { Blocks } from "@/components/home/Blocks";
 import Header from "@/components/home/Header";
 
-export default function HomeClient({ blocks }) {
+interface Block {
+  block_id: number;
+  name: string;
+  color: string;
+  textColor: string;
+}
+
+export default function HomeClient({ blocks }: { blocks: Block[] }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
 
