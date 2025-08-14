@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { blocks } from '@/lib/blocksData';
+
 
 const variants = {
   enter: (direction: number) => {
@@ -31,8 +31,12 @@ const variants = {
   },
 };
 
-export const Blocks = () => {
+export const Blocks = ({ blocks }) => {
   const [[page, direction], setPage] = useState([0, 0]);
+
+  if (!blocks || blocks.length === 0) {
+    return null; // or a loading/empty state
+  }
 
   const paginate = (newDirection: number) => {
     setPage([page + newDirection, newDirection]);
@@ -70,7 +74,7 @@ export const Blocks = () => {
               willChange: 'transform',
             }}
           >
-            <Link href={`/blocks/${blocks[index].id}`} passHref className={`w-full h-full flex items-center justify-center ${blocks[index].textColor}`}>
+            <Link href={`/blocks/${blocks[index].block_id}`} passHref className={`w-full h-full flex items-center justify-center ${blocks[index].textColor}`}>
                 <h3 className="text-5xl font-extrabold">{blocks[index].name}</h3>
             </Link>
           </motion.div>

@@ -4,6 +4,32 @@ const directus = createDirectus(process.env.NEXT_PUBLIC_DIRECTUS_URL!).with(rest
 
 export default directus;
 
+export const getBlocks = async () => {
+  try {
+    const response = await directus.request(
+      readItems('blocks', {
+        fields: [
+          'block_id',
+          'name',
+          'color',
+          'text_color',
+          'image1',
+          'description1_title',
+          'description1_text',
+          'image2',
+          'description2_title',
+          'description2_text',
+        ],
+        sort: ['block_id'],
+      })
+    );
+    return response;
+  } catch (error) {
+    console.error('Error fetching blocks:', error);
+    return [];
+  }
+};
+
 export const fetchEmergencyMessage = async () => {
   try {
     const response = await directus.request(
