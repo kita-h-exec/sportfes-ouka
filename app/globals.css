@@ -148,3 +148,15 @@ body {
   .block-content-mobile-swap .image2 { order: 3; }
   .block-content-mobile-swap .text2 { order: 4; }
 }
+
+html {
+  scroll-snap-type: y mandatory;
+}
+
+.scroll-snap-section {
+  scroll-snap-align: start;
+}
+
+html.scroll-snap-disabled {
+  scroll-snap-type: none;
+}
