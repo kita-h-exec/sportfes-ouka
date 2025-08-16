@@ -103,7 +103,7 @@ const LiquidGlassFinalMaterial = shaderMaterial(
 extend({ LiquidGlassFinalMaterial });
 
 const ShaderPlane = ({ texture, progress }: { texture: THREE.Texture, progress: MotionValue<number> }) => {
-  const materialRef = useRef<any>(null!);
+  const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
   useFrame(({ clock }) => {
     if (materialRef.current) {
@@ -115,7 +115,7 @@ const ShaderPlane = ({ texture, progress }: { texture: THREE.Texture, progress: 
   return (
     <mesh>
       <planeGeometry args={[10, 10, 128, 128]} />
-      {/* @ts-ignore */}
+      {/* @ts-expect-error: Custom material type */}
       <liquidGlassFinalMaterial ref={materialRef} uTexture={texture} transparent={true} />
     </mesh>
   );

@@ -9,9 +9,10 @@ import { fetchEmergencyMessage } from '@/lib/directus';
 
 interface HeaderProps {
   isScrolled: boolean;
+  forceBlackText?: boolean;
 }
 
-const Header = ({ isScrolled }: HeaderProps) => {
+const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
   const { isMenuOpen } = useMenu();
   const [emergencyMessage, setEmergencyMessage] = useState<string | null>(null);
 
@@ -57,7 +58,7 @@ const Header = ({ isScrolled }: HeaderProps) => {
             <Link href="/">
               <h1
                 className="transition-colors duration-300"
-                style={{ color: isScrolled || isMenuOpen ? '#333' : '#fff' }}
+                style={{ color: forceBlackText || isScrolled || isMenuOpen ? '#333' : '#fff' }}
               >
                 うんどう会
               </h1>
