@@ -1,6 +1,26 @@
 import { createDirectus, rest, readItems } from '@directus/sdk';
 
-const directus = createDirectus(process.env.NEXT_PUBLIC_DIRECTUS_URL!).with(rest());
+// Normalize and validate the Directus base URL from env
+function normalizeDirectusUrl(url?: string): string {
+  if (!url) throw new Error('Missing env NEXT_PUBLIC_DIRECTUS_URL');
+  let u = url.trim();
+  if (!/^https?:\/\//i.test(u)) {
+    // Default to https for public hosts; http for localhost
+    const isLocal = /^(localhost|127\.0\.0\.1)(:|$)/i.test(u);
+    u = `${isLocal ? 'http' : 'https'}://${u}`;
+  }
+  try {
+    // Validate
+    // eslint-disable-next-line no-new
+    new URL(u);
+  } catch {
+    throw new TypeError(`Invalid NEXT_PUBLIC_DIRECTUS_URL: "${url}"`);
+  }
+  // Remove trailing slashes for consistency
+  return u.replace(/\/+$/, '');
+}
+
+const directus = createDirectus(normalizeDirectusUrl(process.env.NEXT_PUBLIC_DIRECTUS_URL)).with(rest());
 
 export default directus;
 
@@ -10,8 +30,7 @@ export const getBlocks = () => {
     readItems('blocks', {
       fields: ['slug', 'name', 'color', 'text_color', 'section_1_title', 'section_1_description', 'section_2_title', 'section_2_description'],
       sort: ['slug'], // slugで並び替え
-    }),
-    { cache: 'no-store' } // キャッシュを無効化
+    })
   );
 };
 
@@ -36,23 +55,22 @@ export const getBlockBySlug = async (slug: string) => {
   return items[0];
 };
 
-
 export const fetchEmergencyMessage = async () => {
-   try {
-     const response = await directus.request(
-       readItems('emergency', {
-         fields: ['message', 'display'],
-         limit: 1,
-       })
-     );
-     if (response && response.length > 0 && response[0].display) {
-       return response[0].message;
-     }
-     return null;
-   } catch (error) {
-     console.error('Error fetching emergency message:', error);
-     return null;
-   }
+  try {
+    const response = await directus.request(
+      readItems('emergency', {
+        fields: ['message', 'display'],
+        limit: 1,
+      })
+    );
+    if (response && response.length > 0 && (response as any)[0].display) {
+      return (response as any)[0].message as string;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching emergency message:', error);
+    return null;
+  }
 };
 
 // --- Announcements ---
@@ -81,5 +99,5 @@ export const getHeaderAnnouncement = async () => {
       limit: 1,
     })
   );
-  return response && response.length > 0 ? response[0] : null;
+  return (response && (response as any[]).length > 0) ? (response as any[])[0] : null;
 };

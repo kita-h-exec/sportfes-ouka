@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import type { Variants } from "framer-motion";
 
 const LinkCard = ({ href, title, description, icon }: { href: string; title: string; description: string; icon: string; }) => {
   return (
@@ -28,12 +29,12 @@ export default function ContentsPage() {
     { href: "/competitions", title: "競技紹介", description: "全競技ルール解説", icon: "🏃" },
     { href: "/programs", title: "プログラム", description: "当日の進行", icon: "📜" },
     { href: "/blocks", title: "ブロック紹介", description: "各ブロックの紹介", icon: "🎨" },
-    { href: "/glossary", title: "用語集", description: "運動会で使われる用語", icon: "📚" },
+    { href: "/glossary", title: "用語集", description: "うんどう会で使われる用語", icon: "📚" },
     { href: "/map", title: "校内マップ", description: "施設・避難経路", icon: "🗺️" },
     { href: "/visitors-guide", title: "来場者案内", description: "アクセス・注意事項", icon: "🚗" },
   ];
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -44,7 +45,7 @@ export default function ContentsPage() {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { y: 20, opacity: 0, scale: 0.95 },
     visible: {
       y: 0,

@@ -1,5 +1,6 @@
 
 import { getAnnouncements } from '@/lib/directus';
+import AnnouncementsHeaderClient from '@/components/AnnouncementsHeaderClient';
 
 interface Announcement {
   title: string;
@@ -31,8 +32,8 @@ const AnnouncementCard = ({ announcement }: { announcement: Announcement }) => {
 };
 
 export default async function AnnouncementsPage() {
-  const publishedAnnouncements = await getAnnouncements('published');
-  const archivedAnnouncements = await getAnnouncements('archived');
+  const publishedAnnouncements = (await getAnnouncements('published')) as unknown as Announcement[];
+  const archivedAnnouncements = (await getAnnouncements('archived')) as unknown as Announcement[];
 
   return (
     <div className="min-h-screen bg-gray-50 pt-32 pb-16">
@@ -42,6 +43,7 @@ export default async function AnnouncementsPage() {
         </header>
 
         <section>
+          <AnnouncementsHeaderClient />
           <h2 className="text-3xl font-bold text-gray-700 mb-6 border-b-2 border-fuchsia-500 pb-2">現在のお知らせ</h2>
           <div className="space-y-6">
             {publishedAnnouncements && publishedAnnouncements.length > 0 ? (
