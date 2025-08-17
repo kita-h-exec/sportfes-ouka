@@ -14,6 +14,11 @@ export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
+    // Force scroll to top to avoid auto-snapping on load.
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     if (isLoading) {
       document.body.classList.add("splash-active");
     } else {
@@ -22,6 +27,8 @@ export default function Home() {
   }, [isLoading]);
 
   useEffect(() => {
+    if (isLoading) return; // Don't attach scroll listeners while loading
+
     const handleScroll = () => {
       const offset = window.scrollY;
       if (offset > 50) {
@@ -32,9 +39,7 @@ export default function Home() {
     };
 
     const disableSnapOnScroll = () => {
-      setTimeout(() => {
-        document.documentElement.classList.add('scroll-snap-disabled');
-      }, 200); // Add a 200ms delay
+      document.documentElement.classList.add('scroll-snap-disabled');
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -45,7 +50,7 @@ export default function Home() {
       // No need to remove the once listener, but it's good practice
       window.removeEventListener('scroll', disableSnapOnScroll);
     };
-  }, []);
+  }, [isLoading]);
 
   return (
     <>

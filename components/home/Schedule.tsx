@@ -10,6 +10,7 @@ interface ScheduleItem {
   end_time: string;
   event: string;
   description: string;
+  is_all_day?: boolean;
 }
 
 const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) => void, selectedDate: Date }) => {
@@ -85,7 +86,11 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
       const itemDate = new Date(item.start_time);
       return itemDate.toDateString() === date.toDateString();
     })
-    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    .sort((a, b) => {
+      if (a.is_all_day && !b.is_all_day) return -1;
+      if (!a.is_all_day && b.is_all_day) return 1;
+      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+    });
 
   const formatTime = (isoString: string) => {
     const d = new Date(isoString);
@@ -126,22 +131,32 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
         >
           {scheduleForDate.length > 0 ? (
             scheduleForDate.map((item, index) => {
-              const duration = calculateDuration(item.start_time, item.end_time);
-              const ongoing = isOngoing(item.start_time, item.end_time);
-              const borderColor = ongoing ? 'border-yellow-400' : 'border-fuchsia-400';
+              const isAllDay = item.is_all_day;
+              const duration = !isAllDay ? calculateDuration(item.start_time, item.end_time) : 0;
+              const ongoing = !isAllDay && isOngoing(item.start_time, item.end_time);
+              
+              const baseStyles = "p-4 rounded-lg border-l-4 text-shadow-sm transition-colors duration-300";
+              const borderColor = ongoing ? 'border-yellow-400' : (isAllDay ? 'border-sky-400' : 'border-fuchsia-400');
+              const backgroundStyle = isAllDay ? 'bg-black/10' : 'bg-black/20';
 
               return (
               <motion.li 
                 key={index} 
-                className={`p-4 rounded-lg bg-black/20 border-l-4 ${borderColor} text-shadow-sm transition-colors duration-300`}
+                className={`${baseStyles} ${borderColor} ${backgroundStyle}`}
                 variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
               >
                 <p className="font-bold text-xl">{item.event}</p>
                 <div className="flex items-center text-sm text-gray-200">
-                  <span>{formatTime(item.start_time)}</span>
-                  {item.end_time && <span className="mx-1">~</span>}
-                  {item.end_time && <span>{formatTime(item.end_time)}</span>}
-                  {duration > 0 && <span className="ml-4 text-xs text-gray-400">({duration}分)</span>}
+                  {isAllDay ? (
+                    <span className="font-bold text-sky-300">終日</span>
+                  ) : (
+                    <>
+                      <span>{formatTime(item.start_time)}</span>
+                      {item.end_time && <span className="mx-1">~</span>}
+                      {item.end_time && <span>{formatTime(item.end_time)}</span>}
+                      {duration > 0 && <span className="ml-4 text-xs text-gray-400">({duration}分)</span>}
+                    </>
+                  )}
                 </div>
                 <p className="text-base mt-1">{item.description}</p>
               </motion.li>
@@ -159,7 +174,7 @@ async function getSchedules(): Promise<ScheduleItem[]> {
   try {
     const response = await directus.request(
       readItems('schedules', {
-        fields: ['start_time', 'end_time', 'event', 'description'],
+        fields: ['start_time', 'end_time', 'event', 'description', 'is_all_day'],
         sort: ['start_time'],
       })
     );

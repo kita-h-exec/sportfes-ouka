@@ -38,30 +38,48 @@ export const getBlockBySlug = async (slug: string) => {
 
 
 export const fetchEmergencyMessage = async () => {
-  try {
-    const response = await directus.request(
-      readItems('emergency', {
-        fields: ['message'],
-        filter: {
-          status: {
-            _eq: 'published',
-          },
-        },
-        limit: 1,
-      }),
-      { cache: 'no-store' } // ★追加: キャッシュを無効化
-    );
+   try {
+     const response = await directus.request(
+       readItems('emergency', {
+         fields: ['message', 'display'],
+         limit: 1,
+       })
+     );
+     if (response && response.length > 0 && response[0].display) {
+       return response[0].message;
+     }
+     return null;
+   } catch (error) {
+     console.error('Error fetching emergency message:', error);
+     return null;
+   }
+};
 
-    console.log('Directus response for emergency message:', response);
+// --- Announcements ---
 
-    // responseが配列で、要素が1つ以上あることを確認
-    if (Array.isArray(response) && response.length > 0) {
-      return response[0].message;
-    } else {
-      return null;
-    }
-  } catch (error) {
-    console.error('Error fetching emergency message:', error);
-    return null;
-  }
+// Get all announcements with a specific status
+export const getAnnouncements = (status: 'published' | 'archived') => {
+  return directus.request(
+    readItems('announcements', {
+      filter: { status: { _eq: status } },
+      fields: ['title', 'body', 'date_created', 'date_updated'],
+      sort: ['-date_created'],
+    })
+  );
+};
+
+// Get the latest announcement to be shown in the header
+export const getHeaderAnnouncement = async () => {
+  const response = await directus.request(
+    readItems('announcements', {
+      filter: { 
+        show_in_header: { _eq: true },
+        status: { _eq: 'published' }
+      },
+      fields: ['title'],
+      sort: ['-date_created'],
+      limit: 1,
+    })
+  );
+  return response && response.length > 0 ? response[0] : null;
 };
