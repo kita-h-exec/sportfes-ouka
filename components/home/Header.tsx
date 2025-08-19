@@ -35,8 +35,12 @@ const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
   const textColor = forceBlackText || isScrolled || isMenuOpen ? '#333' : '#fff';
 
   return (
-    <header
-      className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 ${headerBgClass}`}>
+    <>
+  {/* Notch blur overlay moved to global layout */}
+      <header
+  className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 ${headerBgClass}`}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-20">
           <div className="text-2xl font-bold">
@@ -49,7 +53,7 @@ const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
               </h1>
             </Link>
           </div>
-          <HamburgerMenu isScrolled={isScrolled} forceBlackText={forceBlackText} />
+          <HamburgerMenu isScrolled={isScrolled} />
         </div>
       </div>
       {headerAnnouncement && (
@@ -59,7 +63,8 @@ const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
           </Link>
         </div>
       )}
-    </header>
+      </header>
+    </>
   );
 };
 

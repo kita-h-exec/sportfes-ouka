@@ -62,6 +62,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-white dark:bg-background-dark font-sans">
         <MenuProvider> {/* MenuProviderでラップ */}
+          {/* Always-on notch blur overlay (iOS safe area) */}
+          <div
+            id="notch-blur-overlay"
+            className="fixed top-0 left-0 right-0 z-30 pointer-events-none"
+            style={{
+              height: 'env(safe-area-inset-top)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              // Tiny background to ensure Safari renders the backdrop filter
+              backgroundColor: 'rgba(255,255,255,0.001)',
+              transform: 'translateZ(0)'
+            }}
+            aria-hidden
+          />
           <motion.div
             id="background-image"
             className="fixed top-0 left-0 w-full h-screen bg-cover bg-center z-0"
@@ -83,6 +97,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
   });
+  // Keep iOS notch blur reliable across tab switches
+  const fixNotchBlur = () => {
+    const el = document.getElementById('notch-blur-overlay');
+    if (el) {
+      // Nudge styles to force reflow in Safari if needed
+      el.style.opacity = '0.999';
+      // @ts-ignore
+      el.style.webkitBackdropFilter = 'blur(8px)';
+      el.style.backdropFilter = 'blur(8px)';
+      requestAnimationFrame(() => { el.style.opacity = '1'; });
+    }
+  };
+  document.addEventListener('visibilitychange', fixNotchBlur);
+  window.addEventListener('focus', fixNotchBlur);
 }`,
           }}
         />

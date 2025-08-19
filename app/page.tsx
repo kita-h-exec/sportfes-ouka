@@ -10,21 +10,65 @@ import { Blocks } from "@/components/home/Blocks";
 import Header from "@/components/home/Header";
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
+  // Decide splash per context (browser vs PWA standalone) and avoid flash
+  const [splashState, setSplashState] = useState<"unknown" | "show" | "hide">("unknown");
+  const isLoading = splashState === "show";
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Feature flag: once-per-day splash (disabled by default). Toggle to true to enable.
+  const ENABLE_DAILY_SPLASH = false;
 
   useEffect(() => {
     // Force scroll to top to avoid auto-snapping on load.
     window.scrollTo(0, 0);
   }, []);
 
+  // Decide whether to show splash based on prior visit and display mode (PWA vs web)
   useEffect(() => {
-    if (isLoading) {
-      document.body.classList.add("splash-active");
+    const decide = () => {
+      try {
+        const isStandalone =
+          (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+          // iOS Safari specific
+          // @ts-ignore
+          (typeof navigator !== 'undefined' && navigator.standalone === true);
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+        if (isStandalone) {
+          // PWA: show at app launch only once per session; with daily flag enabled, limit to once per day as well
+          const shownThisLaunch = sessionStorage.getItem('splash_session_pwa') === '1';
+          if (shownThisLaunch) {
+            setSplashState('hide');
+          } else if (ENABLE_DAILY_SPLASH) {
+            const last = localStorage.getItem('splash_daily_pwa');
+            setSplashState(last === today ? 'hide' : 'show');
+          } else {
+            setSplashState('show');
+          }
+        } else {
+          // Web: daily mode ON -> once per day, otherwise first-visit-only
+          if (ENABLE_DAILY_SPLASH) {
+            const last = localStorage.getItem('splash_daily_web');
+            setSplashState(last === today ? 'hide' : 'show');
+          } else {
+            const seen = localStorage.getItem('splashSeen_v1_web');
+            setSplashState(seen ? 'hide' : 'show');
+          }
+        }
+      } catch {
+        setSplashState('hide');
+      }
+    };
+    decide();
+  }, []);
+
+  useEffect(() => {
+    if (splashState === 'show') {
+      document.body.classList.add('splash-active');
     } else {
-      document.body.classList.remove("splash-active");
+      document.body.classList.remove('splash-active');
     }
-  }, [isLoading]);
+  }, [splashState]);
 
   useEffect(() => {
     if (isLoading) return; // Don't attach scroll listeners while loading
@@ -52,15 +96,42 @@ export default function Home() {
     };
   }, [isLoading]);
 
+  // Avoid flash before decision
+  if (splashState === 'unknown') return null;
+
   return (
     <>
       <AnimatePresence>
         {isLoading && (
-          <SplashScreen onAnimationComplete={() => setIsLoading(false)} />
+          <SplashScreen
+            onAnimationComplete={() => {
+              try {
+                const isStandalone =
+                  (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+                  // @ts-ignore
+                  (typeof navigator !== 'undefined' && navigator.standalone === true);
+                const today = new Date().toISOString().slice(0, 10);
+                if (isStandalone) {
+                  // mark session as shown; and optionally mark today's date
+                  sessionStorage.setItem('splash_session_pwa', '1');
+                  if (ENABLE_DAILY_SPLASH) {
+                    localStorage.setItem('splash_daily_pwa', today);
+                  }
+                } else {
+                  if (ENABLE_DAILY_SPLASH) {
+                    localStorage.setItem('splash_daily_web', today);
+                  } else {
+                    localStorage.setItem('splashSeen_v1_web', '1');
+                  }
+                }
+              } catch {}
+              setSplashState('hide');
+            }}
+          />
         )}
       </AnimatePresence>
 
-      {!isLoading && (
+      {splashState === 'hide' && (
         <>
           <Header isScrolled={isScrolled} />
           <div className="h-screen relative scroll-snap-section">

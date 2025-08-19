@@ -1,6 +1,12 @@
 
 import { getAnnouncements } from '@/lib/directus';
 import AnnouncementsHeaderClient from '@/components/AnnouncementsHeaderClient';
+import AnnouncementsControls from '../../components/AnnouncementsControls';
+
+// Always render dynamically to fetch the latest announcements immediately
+export const dynamic = 'force-dynamic';
+// Additionally, disable ISR completely
+export const revalidate = 0;
 
 interface Announcement {
   title: string;
@@ -44,6 +50,9 @@ export default async function AnnouncementsPage() {
 
         <section>
           <AnnouncementsHeaderClient />
+          <div className="mt-4 mb-8">
+            <AnnouncementsControls />
+          </div>
           <h2 className="text-3xl font-bold text-gray-700 mb-6 border-b-2 border-fuchsia-500 pb-2">現在のお知らせ</h2>
           <div className="space-y-6">
             {publishedAnnouncements && publishedAnnouncements.length > 0 ? (
