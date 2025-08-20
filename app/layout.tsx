@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [isScrolled, setIsScrolled] = useState(false);
   const { scrollY } = useScroll();
   const pathname = usePathname();
-  const shouldForceBlackText = pathname.startsWith('/blocks') || pathname.startsWith('/announcements');
+  const shouldForceBlackText = pathname.startsWith('/blocks') || pathname.startsWith('/announcements') || pathname.startsWith('/ai');
 
   useEffect(() => {
     const handleScroll = () => {
