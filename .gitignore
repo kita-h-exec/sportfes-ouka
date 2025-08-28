@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# directus backups & large binary artifacts
+directus/backups/
+
+# local pdf assets (commit only if needed)
+public/*.pdf
