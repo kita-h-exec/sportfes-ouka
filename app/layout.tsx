@@ -13,6 +13,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const { scrollY } = useScroll();
   const pathname = usePathname();
   const shouldForceBlackText = pathname.startsWith('/blocks') || pathname.startsWith('/announcements') || pathname.startsWith('/ai');
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -43,12 +48,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="description" content="R7うんどう会HP" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         {/* PWA meta */}
-  <meta name="theme-color" content="#111827" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  {/* Cache-bust the manifest to avoid iOS using stale metadata */}
-  <link rel="manifest" href="/manifest.webmanifest?v=20250817" />
-  {/* Some platforms use this as the app name fallback */}
-  <meta name="application-name" content="うんどう会" />
+        <meta name="theme-color" content="#111827" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        {/* Cache-bust the manifest to avoid iOS using stale metadata */}
+        <link rel="manifest" href="/manifest.webmanifest?v=20250817" />
+        {/* Some platforms use this as the app name fallback */}
+        <meta name="application-name" content="うんどう会" />
         {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -63,19 +68,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-white dark:bg-background-dark font-sans">
         <MenuProvider> {/* MenuProviderでラップ */}
           {/* Always-on notch blur overlay (iOS safe area) */}
-          <div
-            id="notch-blur-overlay"
-            className="fixed top-0 left-0 right-0 z-30 pointer-events-none"
-            style={{
-              height: 'env(safe-area-inset-top)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              // Tiny background to ensure Safari renders the backdrop filter
-              backgroundColor: 'rgba(255,255,255,0.001)',
-              transform: 'translateZ(0)'
-            }}
-            aria-hidden
-          />
+          {isClient && (
+            <div
+              id="notch-blur-overlay"
+              className="fixed top-0 left-0 right-0 z-30 pointer-events-none"
+              style={{
+                height: 'env(safe-area-inset-top)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                backgroundColor: 'rgba(255,255,255,0.001)',
+                transform: 'translateZ(0)',
+                opacity: 1,
+              }}
+              aria-hidden
+            />
+          )}
           <motion.div
             id="background-image"
             className="fixed top-0 left-0 w-full h-screen bg-cover bg-center z-0"
