@@ -32,6 +32,7 @@ export default function ContentsPage() {
     { href: "/glossary", title: "用語集", description: "うんどう会で使われる用語", icon: "📚" },
     { href: "/map", title: "校内マップ", description: "施設・避難経路", icon: "🗺️" },
     { href: "/visitors-guide", title: "来場者案内", description: "アクセス・注意事項", icon: "🚗" },
+  { href: "/youkou", title: "要項類", description: "競技/減点要項", icon: "📝" },
   ];
 
   const containerVariants: Variants = {

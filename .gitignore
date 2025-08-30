@@ -1,4 +1,48 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+##############################################
+# Directus / Project Ignore Rules
+##############################################
+
+# Backups & dumps (機密データ/大容量)
+directus/backups/
+backups/
+*.dump
+*.enc
+*.age
+*.sha256
+combined.tar.gz
+*.tgz
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Node / Next.js build
+node_modules/
+.next/
+out/
+
+# Logs & misc
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+
+# Coverage / test artifacts
+coverage/
+
+# Docker intermediate
+.docker/
+
+# Editor
+.vscode/
+*.swp
+
+###############################################
+# Keep schema snapshots & scripts under version control if added:
+#   directus/schema.yaml (手動追加時)
+#   directus/directus-backup.sh
+################################################ See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 /node_modules

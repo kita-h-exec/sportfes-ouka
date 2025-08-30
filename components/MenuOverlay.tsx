@@ -10,8 +10,8 @@ const MenuOverlay = () => {
   const { isMenuOpen, toggleMenu } = useMenu();
 
   const menuVariants = {
-    hidden: { opacity: 0, transition: { duration: 0.3, ease: 'easeInOut' } },
-    visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeInOut' } },
+    hidden: { opacity: 0, transition: { duration: 0.3 } },
+    visible: { opacity: 1, transition: { duration: 0.3 } },
   };
 
   const linkContainerVariants = {
@@ -27,7 +27,7 @@ const MenuOverlay = () => {
 
   const linkVariants = {
     hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   };
 
   return (
@@ -61,6 +61,9 @@ const MenuOverlay = () => {
               </motion.li>
               <motion.li variants={linkVariants}>
                 <Link href="/contents" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">企画紹介</Link>
+              </motion.li>
+              <motion.li variants={linkVariants}>
+                <Link href="/program" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">プログラム</Link>
               </motion.li>
             </ul>
           </motion.div>

@@ -13,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const { scrollY } = useScroll();
   const pathname = usePathname();
   const shouldForceBlackText = pathname.startsWith('/blocks') || pathname.startsWith('/announcements') || pathname.startsWith('/ai');
+  const hideFooter = pathname.startsWith('/youkou');
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -93,9 +94,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <main className="relative z-10">{children}</main>
 
-          <footer className="relative z-10 bg-gray-800 text-white p-4 text-center mt-10">
-            <p>&copy; 2025 うんどう会運営委員会/執行委員会</p>
-          </footer>
+          {!hideFooter && (
+            <footer className="relative z-10 bg-gray-800 text-white p-4 text-center mt-10">
+              <p>&copy; 2025 うんどう会運営委員会/執行委員会</p>
+            </footer>
+          )}
         </MenuProvider>
         {/* Register service worker */}
         <script
