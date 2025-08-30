@@ -58,6 +58,15 @@ DB_USER=${DB_USER:-"directus"}
 DB_NAME=${DB_NAME:-"directus"}
 # 追加: 出力後に一つの tar.gz を作るか
 CREATE_COMBINED_ARCHIVE=${CREATE_COMBINED_ARCHIVE:-"true"}
+# 追加オプション: 自動転送/暗号化
+AUTO_PUSH=${AUTO_PUSH:-"false"}                 # backup 後自動で push
+REMOTE=${REMOTE:-""}                           # user@host 形式 例: user@example.com
+REMOTE_DIR=${REMOTE_DIR:-"~/directus-backups"} # リモート配置先
+PUSH_MODE=${PUSH_MODE:-"rsync"}                # rsync|scp
+ENCRYPT=${ENCRYPT:-"false"}                    # true なら暗号化
+ENCRYPTION_METHOD=${ENCRYPTION_METHOD:-"aes"}  # aes|age
+# AES 用パスフレーズ (環境変数 BACKUP_PASSPHRASE を利用)
+# age 用: AGE_RECIPIENT に公開鍵 (age1...)
 
 ########################################
 # 環境変数チートシート (MODE=help でも表示)
@@ -166,6 +175,14 @@ META
   restart_directus_if_needed
   log "バックアップ完了: ${target_dir_rel}"
   echo "${target_dir_rel}" > "${BACKUP_ROOT_ABS}/latest.txt"
+
+  # 暗号化 & 転送処理
+  if [[ ${ENCRYPT} == "true" ]]; then
+    encrypt_archive "${target_dir_abs}" "${target_dir_rel}"
+  fi
+  if [[ ${AUTO_PUSH} == "true" && -n ${REMOTE} ]]; then
+    push_backup "${target_dir_abs}" "${target_dir_rel}"
+  fi
 }
 
 list_backups() {
@@ -212,6 +229,49 @@ restore() {
   log "Directus コンテナ起動/再起動"
   compose up -d "${DIRECTUS_SERVICE}"
   log "復元完了"
+}
+
+encrypt_archive() {
+  local dir_abs="$1" dir_rel="$2"
+  local base_tar="${dir_abs}/combined.tar.gz"
+  if [[ ! -f ${base_tar} ]]; then
+    log "combined.tar.gz 無し → 暗号化対象を生成"
+    (cd "${dir_abs}" && tar czf combined.tar.gz db.dump uploads.tgz extensions.tgz 2>/dev/null || true)
+  fi
+  case ${ENCRYPTION_METHOD} in
+    aes)
+      if [[ -z ${BACKUP_PASSPHRASE:-} ]]; then err "BACKUP_PASSPHRASE 未設定 (AES)"; return 1; fi
+      log "AES-256 暗号化: ${dir_rel}/combined.enc"
+      openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "${base_tar}" -out "${dir_abs}/combined.enc" -pass env:BACKUP_PASSPHRASE
+      sha256sum "${dir_abs}/combined.enc" > "${dir_abs}/combined.enc.sha256" 2>/dev/null || shasum -a 256 "${dir_abs}/combined.enc" > "${dir_abs}/combined.enc.sha256"
+      ;;
+    age)
+      if ! command -v age >/dev/null 2>&1; then err "age コマンドが必要"; return 1; fi
+      if [[ -z ${AGE_RECIPIENT:-} ]]; then err "AGE_RECIPIENT 未設定"; return 1; fi
+      log "age 暗号化: ${dir_rel}/combined.age"
+      age -r "${AGE_RECIPIENT}" -o "${dir_abs}/combined.age" "${base_tar}"
+      sha256sum "${dir_abs}/combined.age" > "${dir_abs}/combined.age.sha256" 2>/dev/null || shasum -a 256 "${dir_abs}/combined.age" > "${dir_abs}/combined.age.sha256"
+      ;;
+    *) err "未知の ENCRYPTION_METHOD: ${ENCRYPTION_METHOD}"; return 1;;
+  esac
+}
+
+push_backup() {
+  local dir_abs="$1" dir_rel="$2"
+  if [[ -z ${REMOTE} ]]; then err "REMOTE 未設定"; return 1; fi
+  case ${PUSH_MODE} in
+    rsync)
+      if ! command -v rsync >/dev/null 2>&1; then err "rsync が必要"; return 1; fi
+      log "rsync 転送 -> ${REMOTE}:${REMOTE_DIR}/${dir_rel##*/}"
+      rsync -avz --mkpath "${dir_abs}/" "${REMOTE}:${REMOTE_DIR}/${dir_rel##*/}/"
+      ;;
+    scp)
+      log "scp 転送 -> ${REMOTE}:${REMOTE_DIR}"
+      ssh "${REMOTE}" "mkdir -p ${REMOTE_DIR}/${dir_rel##*/}" || true
+      scp -r "${dir_abs}"/* "${REMOTE}:${REMOTE_DIR}/${dir_rel##*/}/"
+      ;;
+    *) err "未知の PUSH_MODE: ${PUSH_MODE}"; return 1;;
+  esac
 }
 
 menu() {
