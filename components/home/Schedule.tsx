@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import directus from '@/lib/directus';
-import { readItems } from '@directus/sdk';
+// 直接クライアントから Directus を叩くと Public ロール権限不足で失敗する場合があるため
+// サーバー側トークンを使う /api/schedules 経由に切り替え
 
 interface ScheduleItem {
   start_time: string;
@@ -81,10 +81,12 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
     return () => clearInterval(timer);
   }, []);
 
+  const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const targetKey = key(date);
   const scheduleForDate = schedules
     .filter(item => {
       const itemDate = new Date(item.start_time);
-      return itemDate.toDateString() === date.toDateString();
+      return key(itemDate) === targetKey;
     })
     .sort((a, b) => {
       if (a.is_all_day && !b.is_all_day) return -1;
@@ -172,15 +174,19 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
 
 async function getSchedules(): Promise<ScheduleItem[]> {
   try {
-    const response = await directus.request(
-      readItems('schedules', {
-        fields: ['start_time', 'end_time', 'event', 'description', 'is_all_day'],
-        sort: ['start_time'],
-      })
-    );
-    return response as ScheduleItem[];
+    const res = await fetch('/api/schedules', { cache: 'no-store' });
+    if (!res.ok) {
+      console.error('Failed to fetch /api/schedules', res.status);
+      return [];
+    }
+    const json = await res.json();
+    if (!json.ok) {
+      console.error('API error /api/schedules', json.error);
+      return [];
+    }
+    return json.items as ScheduleItem[];
   } catch (error) {
-    console.error("Failed to fetch schedules:", error);
+    console.error('Failed to fetch schedules:', error);
     return [];
   }
 }
