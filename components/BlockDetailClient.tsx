@@ -29,8 +29,8 @@ const BlockDetailClient = ({ block, prevBlock, nextBlock }: { block: Block, prev
 
     const textVariants = {
       hidden: { opacity: 0, y: 50 },
-      visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut', delay: 0.2 } },
-    };
+      visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 } },
+    } as const;
 
     return (
       <div ref={ref} className="w-full min-h-screen flex flex-col md:flex-row">
@@ -72,7 +72,12 @@ const BlockDetailClient = ({ block, prevBlock, nextBlock }: { block: Block, prev
             variants={textVariants}
             className="max-w-md text-center md:text-left"
           >
-            <h2 className="text-4xl font-bold mb-6" style={{ color }}>{title}</h2>
+            {/** 白背景の場合は見辛さ回避のため文字色を黒 (#000) へフォールバック */}
+            {(() => {
+              const isWhiteBg = typeof color === 'string' && /^(#fff(fff)?|#FFFFFF|#ffffff)$/i.test(color.trim());
+              const titleStyle: React.CSSProperties = { color: isWhiteBg ? '#000' : color };
+              return <h2 className="text-4xl font-bold mb-6" style={titleStyle}>{title}</h2>;
+            })()}
             {description && <p className="text-gray-600 text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: description }} />}
           </motion.div>
         </div>
@@ -85,9 +90,15 @@ const BlockDetailClient = ({ block, prevBlock, nextBlock }: { block: Block, prev
       
 
        <header className="py-12 text-center bg-gray-50">
-        <h1 className="text-6xl font-extrabold" style={{ color: block.color }}>
-          {block.name}
-        </h1>
+        {(() => {
+          const isWhiteBg = typeof block.color === 'string' && /^(#fff(fff)?|#FFFFFF|#ffffff)$/i.test(block.color.trim());
+          const titleStyle: React.CSSProperties = { color: isWhiteBg ? '#000' : block.color };
+          return (
+            <h1 className="text-6xl font-extrabold" style={titleStyle}>
+              {block.name}
+            </h1>
+          );
+        })()}
       </header>
 
       <Section

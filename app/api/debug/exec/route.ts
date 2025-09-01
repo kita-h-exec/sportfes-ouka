@@ -20,8 +20,49 @@ interface CustomRequest extends ExecRequestBase {
   body?: unknown;
   useAdminAuth?: boolean; // true の場合 Authorization: Bearer <ADMIN_TOKEN> を付与
 }
+interface AdminTokenStatusRequest extends ExecRequestBase { action: 'admin_token_status'; }
+interface SetAdminTokenRequest extends ExecRequestBase { action: 'set_admin_token'; token: string; }
+interface ClearAdminTokenRequest extends ExecRequestBase { action: 'clear_admin_token'; }
+interface LogsRequest extends ExecRequestBase { action: 'logs'; }
+interface ClearLogsRequest extends ExecRequestBase { action: 'clear_logs'; }
 
-type ExecRequest = ClearCacheRequest | CustomRequest;
+type ExecRequest =
+  | ClearCacheRequest
+  | CustomRequest
+  | AdminTokenStatusRequest
+  | SetAdminTokenRequest
+  | ClearAdminTokenRequest
+  | LogsRequest
+  | ClearLogsRequest;
+
+// プロセス稼働中のみ有効な一時的管理者トークン (再デプロイ/再起動で消える)
+let ADMIN_TOKEN_OVERRIDE: string | null = null;
+
+// シンプルなインメモリログ (プロセスライフタイム内のみ保持)
+const LOG_MAX = parseInt(process.env.DEBUG_LOG_MAX || '500', 10);
+type DebugLogEntry = { ts: string; action: string; ip?: string | null; detail?: Record<string, unknown>; };
+const LOG_BUFFER: DebugLogEntry[] = [];
+
+function pushLog(entry: DebugLogEntry) {
+  LOG_BUFFER.push(entry);
+  if (LOG_BUFFER.length > LOG_MAX) LOG_BUFFER.splice(0, LOG_BUFFER.length - LOG_MAX);
+}
+
+function clientIp(req: NextRequest): string | null {
+  const xf = req.headers.get('x-forwarded-for');
+  if (xf) return xf.split(',')[0].trim();
+  return req.headers.get('x-real-ip');
+}
+
+function getAdminToken(): string | undefined {
+  return ADMIN_TOKEN_OVERRIDE || process.env.DIRECTUS_ADMIN_TOKEN;
+}
+
+function maskToken(token?: string | null): string | null {
+  if (!token) return null;
+  if (token.length <= 8) return '*'.repeat(Math.max(0, token.length - 2)) + token.slice(-2);
+  return '*'.repeat(token.length - 4) + token.slice(-4);
+}
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ ok: false, error: message }, { status });
@@ -54,8 +95,8 @@ export async function POST(req: NextRequest) {
 
   if (payload.action === 'clear_cache') {
     const url = process.env.DIRECTUS_CACHE_CLEAR_URL || 'https://ouka-directus.nasno.net/utils/cache/clear';
-    const token = process.env.DIRECTUS_ADMIN_TOKEN;
-    if (!token) return jsonError('Server missing DIRECTUS_ADMIN_TOKEN env (not configured)', 500);
+    const token = getAdminToken();
+    if (!token) return jsonError('Server missing admin token (env or override)', 500);
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -66,10 +107,60 @@ export async function POST(req: NextRequest) {
       const text = await res.text();
       let data: any = text; // eslint-disable-line @typescript-eslint/no-explicit-any
       try { data = JSON.parse(text); } catch {/* ignore */}
+      pushLog({ ts: new Date().toISOString(), action: 'clear_cache', ip: clientIp(req), detail: { status: res.status, ok: res.ok } });
       return NextResponse.json({ ok: res.ok, status: res.status, data, elapsedMs: Date.now() - started }, { status: res.ok ? 200 : 502 });
     } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      pushLog({ ts: new Date().toISOString(), action: 'clear_cache_error', ip: clientIp(req), detail: { error: e?.message || String(e) } });
       return jsonError(`Fetch error: ${e?.message || e}` , 500);
     }
+  }
+
+  // --- 管理者トークンの状態取得 ---
+  if (payload.action === 'admin_token_status') {
+    const baseExists = Boolean(process.env.DIRECTUS_ADMIN_TOKEN);
+    const overrideExists = Boolean(ADMIN_TOKEN_OVERRIDE);
+    return NextResponse.json({
+      ok: true,
+      status: 200,
+      data: {
+        hasBase: baseExists,
+        hasOverride: overrideExists,
+        effective: maskToken(getAdminToken()),
+        overrideMasked: maskToken(ADMIN_TOKEN_OVERRIDE),
+        allowed: process.env.DEBUG_ENABLE_ADMIN_TOKEN_OVERRIDE === '1'
+      },
+      elapsedMs: Date.now() - started
+    });
+  }
+
+  // --- 管理者トークンの一時上書き設定 ---
+  if (payload.action === 'set_admin_token') {
+    if (process.env.DEBUG_ENABLE_ADMIN_TOKEN_OVERRIDE !== '1') return jsonError('Admin token override disabled');
+    const { token } = payload as SetAdminTokenRequest;
+    if (!token || typeof token !== 'string' || token.length < 10) return jsonError('Invalid token (length)');
+    ADMIN_TOKEN_OVERRIDE = token.trim();
+    pushLog({ ts: new Date().toISOString(), action: 'set_admin_token', ip: clientIp(req), detail: { len: ADMIN_TOKEN_OVERRIDE.length } });
+    return NextResponse.json({ ok: true, status: 200, data: { message: 'override set', effective: maskToken(ADMIN_TOKEN_OVERRIDE) }, elapsedMs: Date.now() - started });
+  }
+
+  if (payload.action === 'clear_admin_token') {
+    if (process.env.DEBUG_ENABLE_ADMIN_TOKEN_OVERRIDE !== '1') return jsonError('Admin token override disabled');
+    ADMIN_TOKEN_OVERRIDE = null;
+    pushLog({ ts: new Date().toISOString(), action: 'clear_admin_token', ip: clientIp(req) });
+    return NextResponse.json({ ok: true, status: 200, data: { message: 'override cleared', effective: maskToken(getAdminToken()) }, elapsedMs: Date.now() - started });
+  }
+
+  // --- ログ取得 ---
+  if (payload.action === 'logs') {
+    if (process.env.DEBUG_ENABLE_LOG_VIEW !== '1') return jsonError('Log view disabled');
+    return NextResponse.json({ ok: true, status: 200, data: { size: LOG_BUFFER.length, max: LOG_MAX, entries: LOG_BUFFER.slice().reverse() }, elapsedMs: Date.now() - started });
+  }
+
+  if (payload.action === 'clear_logs') {
+    if (process.env.DEBUG_ENABLE_LOG_VIEW !== '1') return jsonError('Log view disabled');
+    LOG_BUFFER.length = 0;
+    pushLog({ ts: new Date().toISOString(), action: 'logs_cleared', ip: clientIp(req) });
+    return NextResponse.json({ ok: true, status: 200, data: { message: 'logs cleared' }, elapsedMs: Date.now() - started });
   }
 
   if (payload.action === 'custom') {
@@ -90,9 +181,10 @@ export async function POST(req: NextRequest) {
       return jsonError('Malformed url');
     }
     const headers: Record<string, string> = { 'Accept': 'application/json', ...(payload.headers || {}) };
-    if (payload.useAdminAuth) {
-      if (!process.env.DIRECTUS_ADMIN_TOKEN) return jsonError('Server missing DIRECTUS_ADMIN_TOKEN env', 500);
-      headers.Authorization = `Bearer ${process.env.DIRECTUS_ADMIN_TOKEN}`;
+  if (payload.useAdminAuth) {
+      const token = getAdminToken();
+      if (!token) return jsonError('Server missing admin token', 500);
+      headers.Authorization = `Bearer ${token}`;
     }
     let body: BodyInit | undefined;
     if (payload.body !== undefined) {
@@ -114,8 +206,10 @@ export async function POST(req: NextRequest) {
       const text = await res.text();
       let parsed: any = text; // eslint-disable-line @typescript-eslint/no-explicit-any
       try { parsed = JSON.parse(text); } catch {/* keep raw text */}
+      pushLog({ ts: new Date().toISOString(), action: 'custom', ip: clientIp(req), detail: { url, status: res.status, method } });
       return NextResponse.json({ ok: res.ok, status: res.status, data: parsed, elapsedMs: Date.now() - started }, { status: res.ok ? 200 : 502 });
     } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      pushLog({ ts: new Date().toISOString(), action: 'custom_error', ip: clientIp(req), detail: { url, error: e?.message || String(e) } });
       return jsonError(`Fetch error: ${e?.message || e}`, 500);
     }
   }

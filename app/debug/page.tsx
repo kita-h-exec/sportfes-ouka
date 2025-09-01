@@ -22,6 +22,12 @@ export default function DebugPage() {
   const [password, setPassword] = useState('');
   const [authed, setAuthed] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [adminTokenInput, setAdminTokenInput] = useState('');
+  const [adminTokenStatus, setAdminTokenStatus] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [adminTokenLoading, setAdminTokenLoading] = useState(false);
+  const [logs, setLogs] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   async function checkAuth(pw: string) {
     setAuthError(null);
@@ -82,6 +88,56 @@ export default function DebugPage() {
       setLoading(false);
     }
   }
+
+  async function fetchAdminTokenStatus() {
+    try {
+      const res = await fetch('/api/debug/exec', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify({ action: 'admin_token_status' }) });
+      const json = await res.json();
+      setAdminTokenStatus(json.data);
+    } catch {/* ignore */}
+  }
+
+  async function setAdminToken() {
+    if (!adminTokenInput.trim()) return;
+    setAdminTokenLoading(true);
+    try {
+      const res = await fetch('/api/debug/exec', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify({ action: 'set_admin_token', token: adminTokenInput.trim() }) });
+      await fetchAdminTokenStatus();
+      if (res.ok) setAdminTokenInput('');
+    } finally { setAdminTokenLoading(false); }
+  }
+
+  async function clearAdminToken() {
+    setAdminTokenLoading(true);
+    try {
+      await fetch('/api/debug/exec', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify({ action: 'clear_admin_token' }) });
+      await fetchAdminTokenStatus();
+    } finally { setAdminTokenLoading(false); }
+  }
+
+  async function fetchLogs() {
+    setLogsLoading(true);
+    try {
+      const res = await fetch('/api/debug/exec', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify({ action: 'logs' }) });
+      const json = await res.json();
+      if (json.ok) setLogs(json.data);
+    } finally { setLogsLoading(false); }
+  }
+
+  async function clearLogs() {
+    setLogsLoading(true);
+    try {
+      await fetch('/api/debug/exec', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify({ action: 'clear_logs' }) });
+      await fetchLogs();
+    } finally { setLogsLoading(false); }
+  }
+
+  useEffect(() => {
+    if (!authed || !logsOpen) return;
+    fetchLogs();
+    const id = setInterval(fetchLogs, 10000);
+    return () => clearInterval(id);
+  }, [authed, logsOpen]);
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-4">
@@ -129,6 +185,28 @@ export default function DebugPage() {
         </section>
 
         <section className="space-y-4 bg-slate-800/60 border border-slate-700 rounded-lg p-5">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-lg font-semibold">管理者トークン上書き</h2>
+            <button onClick={fetchAdminTokenStatus} className="text-xs px-2 py-1 rounded border border-slate-600 hover:bg-slate-700">更新</button>
+          </div>
+          <p className="text-[11px] text-slate-400">DEBUG_ENABLE_ADMIN_TOKEN_OVERRIDE=1 が有効な時のみ設定できます。再起動で消えます。</p>
+          <div className="grid gap-3 md:grid-cols-3 items-start">
+            <input value={adminTokenInput} onChange={e => setAdminTokenInput(e.target.value)} placeholder="新しい管理者トークン" className="md:col-span-2 border border-slate-600 bg-slate-900 rounded px-2 py-1 text-xs font-mono" />
+            <div className="flex gap-2">
+              <button onClick={setAdminToken} disabled={adminTokenLoading || !adminTokenInput.trim()} className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs disabled:opacity-50">セット</button>
+              <button onClick={clearAdminToken} disabled={adminTokenLoading} className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white text-xs disabled:opacity-50">クリア</button>
+            </div>
+          </div>
+          <div className="text-[11px] space-y-1 bg-slate-900/60 border border-slate-700 rounded p-3 font-mono">
+            <div>allow: {String(adminTokenStatus?.allowed)}</div>
+            <div>hasBase: {String(adminTokenStatus?.hasBase)}</div>
+            <div>hasOverride: {String(adminTokenStatus?.hasOverride)}</div>
+            <div>effective: {adminTokenStatus?.effective || '-'}</div>
+            <div className="text-slate-500">overrideMasked: {adminTokenStatus?.overrideMasked || '-'}</div>
+          </div>
+        </section>
+
+        <section className="space-y-4 bg-slate-800/60 border border-slate-700 rounded-lg p-5">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">カスタム HTTP 実行</h2>
             <button className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700" onClick={() => setCustomOpen(o => !o)}>{customOpen ? '閉じる' : '開く'}</button>
@@ -163,6 +241,36 @@ export default function DebugPage() {
                 >{loading ? '送信中…' : 'カスタム実行'}</button>
               </div>
               <p className="text-[10px] text-slate-500 col-span-2">DEBUG_ENABLE_CUSTOM=1 とホスト許可が必要です。</p>
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-4 bg-slate-800/60 border border-slate-700 rounded-lg p-5">
+          <div className="flex items-center gap-4 flex-wrap">
+            <h2 className="text-lg font-semibold">ログビューア</h2>
+            <button onClick={() => { setLogsOpen(o => !o); }} className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700">{logsOpen ? '閉じる' : '開く'}</button>
+            {logsOpen && (
+              <>
+                <button onClick={fetchLogs} disabled={logsLoading} className="text-xs px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-50">更新</button>
+                <button onClick={clearLogs} disabled={logsLoading} className="text-xs px-3 py-1 rounded bg-red-700 hover:bg-red-600 disabled:opacity-50">クリア</button>
+              </>
+            )}
+          </div>
+          {logsOpen && (
+            <div className="space-y-2">
+              <div className="text-[10px] text-slate-500">DEBUG_ENABLE_LOG_VIEW=1 が必要。最大 {logs?.max} entries。</div>
+              <div className="h-72 overflow-auto rounded border border-slate-700 bg-slate-900/70 p-2 text-[11px] font-mono leading-relaxed">
+                {logsLoading && <div className="text-slate-500">読み込み中…</div>}
+                {!logsLoading && logs?.entries?.length === 0 && <div className="text-slate-500">ログなし</div>}
+                {!logsLoading && logs?.entries?.map((e: any, i: number) => (
+                  <div key={i} className="flex gap-2 py-0.5 border-b border-slate-800 last:border-b-0">
+                    <span className="text-slate-500 shrink-0">{e.ts}</span>
+                    <span className="shrink-0 px-1 rounded bg-slate-700/60 text-slate-200">{e.action}</span>
+                    <span className="text-slate-400 break-all">{e.ip}</span>
+                    {e.detail && <span className="text-slate-500">{JSON.stringify(e.detail)}</span>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </section>

@@ -92,6 +92,11 @@ export const Blocks = ({ initialBlocks }: BlocksProps) => {
         onTouchEnd={handleTouchEnd}
       >
         {blocks.map((block, index) => {
+          // 白背景 (#FFFFFF / #ffffff / #fff) の場合は視認性確保のためテキスト色を強制的に黒へフォールバック
+          const isWhiteBg = typeof block.color === 'string' && /^(#fff(fff)?|#FFFFFF|#ffffff)$/i.test(block.color.trim());
+          // block.text_color には Tailwind の text-*** クラス or 直接指定が入る想定
+          // 白背景の場合、既存 text-*white 系を上書きしたいので inline style で color: '#000' を適用
+          const enforcedTextStyle: React.CSSProperties | undefined = isWhiteBg ? { color: '#000' } : undefined;
           // offset: -1 (prev), 0 (current), 1 (next), others hidden
           let rawOffset = index - currentIndex;
           // Wrap shortest path for circular carousel
@@ -119,7 +124,7 @@ export const Blocks = ({ initialBlocks }: BlocksProps) => {
                 style={{ backgroundColor: block.color, width: mounted ? 'clamp(220px,32vw,340px)' : '260px', aspectRatio: '9/16' }}
               >
                 <div className="w-full h-full flex items-center justify-center p-4">
-                  <h3 className="text-4xl md:text-5xl font-extrabold drop-shadow-lg text-center leading-tight break-words">
+                  <h3 className="text-4xl md:text-5xl font-extrabold drop-shadow-lg text-center leading-tight break-words" style={enforcedTextStyle}>
                     {block.name}
                   </h3>
                 </div>
