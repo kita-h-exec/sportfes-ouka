@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import HamburgerMenu from './HamburgerMenu';
 import { useState, useEffect } from 'react';
 import { useMenu } from '@/components/useMenu';
-import { getHeaderAnnouncement } from '@/lib/directus';
 
 interface HeaderProps {
   isScrolled: boolean;
@@ -22,8 +21,16 @@ const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
 
   useEffect(() => {
     const fetchHeaderAnnouncement = async () => {
-      const announcement = await getHeaderAnnouncement();
-      setHeaderAnnouncement(announcement);
+      try {
+        const res = await fetch('/api/announcements/header', { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.data) setHeaderAnnouncement(json.data);
+        }
+      } catch (e) {
+        // silent
+        console.warn('[Header] header announcement fetch failed');
+      }
     };
     fetchHeaderAnnouncement();
   }, []);

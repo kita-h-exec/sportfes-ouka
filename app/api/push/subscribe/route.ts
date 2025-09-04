@@ -8,11 +8,9 @@ export async function POST(req: NextRequest) {
     if (subStr.length < 50) {
       return NextResponse.json({ ok: false, error: 'invalid subscription' }, { status: 400 });
     }
-  await saveSubscription(body);
-    return NextResponse.json({ ok: true });
-  } catch (e) {
+  const saved = await saveSubscription(body);
+  return NextResponse.json({ ok: saved.ok, backend: saved.backend, duplicate: saved.duplicate });
+  } catch {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
-
-// no-op

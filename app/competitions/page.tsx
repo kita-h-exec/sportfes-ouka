@@ -119,6 +119,37 @@ export default function CompetitionsPage() {
       setError("4桁のホームルームナンバーを入力してください");
       return;
     }
+    // Demo (0000) 用: ユーザー要求により 0000 入力時は固定データを表示
+    if (studentId === "0000") {
+      setError(null);
+      setLoading(true);
+      setData(null);
+      localStorage.setItem("comp_studentId", studentId);
+      // 指定されたデモ内容
+      const demo: SuccessPayload = {
+        status: "success",
+        data: {
+          studentId: "0000",
+          competitions: [
+            {
+              name: "もぎたま",
+              details: "試合=1, 招集場所=A, ブロック=6, 招集時間=9:30"
+            },
+            {
+              name: "つなひき",
+              details: "試合=5, 場所=b, ブロック=9, 招集時間=綱の準備完了後"
+            }
+          ]
+        }
+      };
+      // ネットワークを介さず即時反映
+      setTimeout(() => {
+        setData(demo);
+        setUpdatedAt(new Date());
+        setLoading(false);
+      }, 350); // 体感上のフェード (わずかな遅延でローディング演出)
+      return;
+    }
     setError(null);
     setLoading(true);
     setData(null);

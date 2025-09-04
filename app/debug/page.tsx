@@ -28,6 +28,16 @@ export default function DebugPage() {
   const [logs, setLogs] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [logsOpen, setLogsOpen] = useState(false);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [pushTitle, setPushTitle] = useState('テスト通知');
+  const [pushBody, setPushBody] = useState('これはデバッグ送信です');
+  const [pushUrl, setPushUrl] = useState('/announcements');
+  const [pushSending, setPushSending] = useState(false);
+  const [pushResult, setPushResult] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [pushStats, setPushStats] = useState<number | null>(null);
+  const [pushStatsLoading, setPushStatsLoading] = useState(false);
+  const [annTemplates, setAnnTemplates] = useState<any[] | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [annLoading, setAnnLoading] = useState(false);
+  const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
 
   async function checkAuth(pw: string) {
     setAuthError(null);
@@ -138,6 +148,53 @@ export default function DebugPage() {
     const id = setInterval(fetchLogs, 10000);
     return () => clearInterval(id);
   }, [authed, logsOpen]);
+
+  async function sendPush() {
+    setPushSending(true);
+    setPushResult(null);
+    try {
+      const res = await fetch('/api/debug/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-debug-password': password },
+        body: JSON.stringify({ action: 'push_notify', title: pushTitle, body: pushBody, url: pushUrl })
+      });
+      const json = await res.json();
+      setPushResult(json);
+    } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      setPushResult({ ok: false, error: e?.message || String(e) });
+    } finally {
+      setPushSending(false);
+    }
+  }
+
+  async function fetchPushStats() {
+    setPushStatsLoading(true);
+    try {
+      const res = await fetch('/api/debug/exec', { method: 'POST', headers: { 'Content-Type':'application/json', 'x-debug-password': password }, body: JSON.stringify({ action: 'push_stats' }) });
+      const json = await res.json();
+      if (json.ok) setPushStats(json.data?.count ?? 0);
+    } finally { setPushStatsLoading(false); }
+  }
+
+  async function fetchAnnouncements() {
+    setAnnLoading(true);
+    try {
+      const res = await fetch('/api/announcements/list', { cache: 'no-store' });
+      const json = await res.json();
+      if (json.ok) {
+        setAnnTemplates(json.data || []);
+      }
+    } finally { setAnnLoading(false); }
+  }
+
+  function applyTemplate(id: string) {
+    if (!annTemplates) return;
+    const a = annTemplates.find(t => String((t as any).id) === id); // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (!a) return;
+    setSelectedAnnId(id);
+    if (a.title) setPushTitle(a.title);
+    if (a.body) setPushBody(a.body);
+  }
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-4">
@@ -273,6 +330,43 @@ export default function DebugPage() {
               </div>
             </div>
           )}
+        </section>
+
+        <section className="space-y-4 bg-slate-800/60 border border-slate-700 rounded-lg p-5">
+          <h2 className="text-lg font-semibold">プッシュ通知送信</h2>
+          <p className="text-[11px] text-slate-400">購読済み端末にテスト通知を送ります。VAPID鍵と購読が必要。</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="md:col-span-2 flex items-center gap-2 flex-wrap">
+              <button onClick={fetchAnnouncements} type="button" className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700 disabled:opacity-50" disabled={annLoading}>{annLoading ? '取得中…' : 'お知らせ読込'}</button>
+              {annTemplates && annTemplates.length > 0 && (
+                <select value={selectedAnnId || ''} onChange={e => applyTemplate(e.target.value)} className="text-xs bg-slate-900 border border-slate-600 rounded px-2 py-1">
+                  <option value="">テンプレ選択...</option>
+                  {annTemplates.slice(0,50).map((a: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                    <option key={a.id} value={a.id}>{a.title?.slice(0,40) || '(no title)'}</option>
+                  ))}
+                </select>
+              )}
+              {annTemplates && <span className="text-[10px] text-slate-500">{annTemplates.length}件</span>}
+            </div>
+            <label className="text-xs font-medium flex flex-col gap-1">
+              <span>Title</span>
+              <input value={pushTitle} onChange={e => setPushTitle(e.target.value)} className="w-full border border-slate-600 bg-slate-900 rounded px-2 py-1 text-sm" />
+            </label>
+            <label className="text-xs font-medium flex flex-col gap-1">
+              <span>URL (クリック先)</span>
+              <input value={pushUrl} onChange={e => setPushUrl(e.target.value)} className="w-full border border-slate-600 bg-slate-900 rounded px-2 py-1 text-sm" />
+            </label>
+            <label className="text-xs font-medium flex flex-col gap-1 md:col-span-2">
+              <span>Body</span>
+              <textarea value={pushBody} onChange={e => setPushBody(e.target.value)} rows={2} className="w-full border border-slate-600 bg-slate-900 rounded px-2 py-1 text-xs" />
+            </label>
+            <div className="md:col-span-2 flex items-center gap-3">
+              <button onClick={sendPush} disabled={pushSending} className="px-5 py-2.5 rounded bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-500 hover:to-pink-500 text-white text-sm font-medium disabled:opacity-50">{pushSending ? '送信中…' : '送信'}</button>
+              {pushResult && <span className={"text-xs " + (pushResult.ok ? 'text-emerald-400' : 'text-red-400')}>{pushResult.ok ? `OK sent=${pushResult.data?.sent}` : '失敗'}</span>}
+              <button onClick={fetchPushStats} disabled={pushStatsLoading} className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700 disabled:opacity-50">{pushStatsLoading ? '取得中…' : '購読数'}</button>
+              {pushStats !== null && <span className="text-xs text-slate-400">{pushStats} subs</span>}
+            </div>
+          </div>
         </section>
 
         {result && (

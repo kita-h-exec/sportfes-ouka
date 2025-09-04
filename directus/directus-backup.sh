@@ -56,6 +56,9 @@ UPLOADS_VOLUME=${UPLOADS_VOLUME:-"directus_uploads"}
 EXTENSIONS_VOLUME=${EXTENSIONS_VOLUME:-"directus_extensions"}
 DB_USER=${DB_USER:-"directus"}
 DB_NAME=${DB_NAME:-"directus"}
+# Redis 関連 (復元時のキャッシュ無効化用)
+REDIS_SERVICE=${REDIS_SERVICE:-"redis"}
+REDIS_PASSWORD=${REDIS_PASSWORD:-"REDACTED_REDIS_PASSWORD"}
 # 追加: 出力後に一つの tar.gz を作るか
 CREATE_COMBINED_ARCHIVE=${CREATE_COMBINED_ARCHIVE:-"true"}
 # 追加オプション: 自動転送/暗号化
@@ -74,6 +77,8 @@ ENCRYPTION_METHOD=${ENCRYPTION_METHOD:-"aes"}  # aes|age
 #  BACKUP_DIR_ROOT          バックアップ格納ルート (既定: backups)
 #  POSTGRES_SERVICE         Postgres サービス名
 #  DIRECTUS_SERVICE         Directus サービス名
+#  REDIS_SERVICE            Redis サービス名 (既定: redis)
+#  REDIS_PASSWORD           redis-cli 用パスワード (requirepass と合わせる)
 #  UPLOADS_VOLUME           アップロード用 Docker ボリューム名
 #  EXTENSIONS_VOLUME        extensions 用 Docker ボリューム名
 #  DB_USER / DB_NAME        pg_dump/pg_restore に使用する認証情報
@@ -210,6 +215,16 @@ restore() {
 
   log "DB を復元 (pg_restore --clean --if-exists)"
   if [[ ! -f ${target}/db.dump ]]; then err "db.dump 無し"; exit 1; fi
+  # 依存関係で DROP が失敗するケース (外部 FK など) を避けるため、事前に public スキーマを全削除し再作成
+  # 環境変数 PRE_DROP_PUBLIC=true で有効 (既定: true)
+  if [[ ${PRE_DROP_PUBLIC:-true} == true ]]; then
+    log "既存 public スキーマを DROP CASCADE → 再作成"
+    if ! compose exec -T "${POSTGRES_SERVICE}" psql -U "${DB_USER}" -d "${DB_NAME}" -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${DB_USER};"; then
+      err "public スキーマ再作成失敗"; exit 1
+    fi
+  else
+    log "public スキーマ事前削除をスキップ (PRE_DROP_PUBLIC=false)"
+  fi
   compose exec -T "${POSTGRES_SERVICE}" pg_restore -U "${DB_USER}" -d "${DB_NAME}" --clean --if-exists < "${target}/db.dump"
 
   if [[ -f ${target}/uploads.tgz ]]; then
@@ -225,10 +240,23 @@ restore() {
   else
     log "extensions.tgz 無し → スキップ"
   fi
+  # Redis キャッシュを必ず無効化
+  if compose ps | grep -q "${REDIS_SERVICE}"; then
+    log "Redis キャッシュ FLUSHALL (${REDIS_SERVICE})"
+    if ! compose exec -T "${REDIS_SERVICE}" redis-cli -a "${REDIS_PASSWORD}" FLUSHALL; then
+      log "Redis FLUSHALL 失敗 (続行)"
+    fi
+  else
+    log "Redis サービス (${REDIS_SERVICE}) が存在しない/起動していないため FLUSHALL スキップ"
+  fi
 
-  log "Directus コンテナ起動/再起動"
-  compose up -d "${DIRECTUS_SERVICE}"
-  log "復元完了"
+  log "Directus 再起動 (キャッシュ/接続再初期化)"
+  if compose ps --status running | grep -q "${DIRECTUS_SERVICE}"; then
+    compose restart "${DIRECTUS_SERVICE}" || compose up -d "${DIRECTUS_SERVICE}"
+  else
+    compose up -d "${DIRECTUS_SERVICE}"
+  fi
+  log "復元完了 (Redis キャッシュクリア済)"
 }
 
 encrypt_archive() {
@@ -304,6 +332,8 @@ UPLOADS_VOLUME=${UPLOADS_VOLUME}
 EXTENSIONS_VOLUME=${EXTENSIONS_VOLUME}
 DB_USER=${DB_USER}
 DB_NAME=${DB_NAME}
+REDIS_SERVICE=${REDIS_SERVICE}
+REDIS_PASSWORD=${REDIS_PASSWORD}
 CREATE_COMBINED_ARCHIVE=${CREATE_COMBINED_ARCHIVE}
 
 例:

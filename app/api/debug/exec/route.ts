@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import webpush from '@/lib/webpush';
+import { listSubscriptions, backendKind } from '@/lib/pushStore';
 
 // この API はデバッグ用途: Directus のキャッシュクリアなどサーバー側で安全にトークンを扱う
 // 想定する環境変数:
@@ -25,6 +27,16 @@ interface SetAdminTokenRequest extends ExecRequestBase { action: 'set_admin_toke
 interface ClearAdminTokenRequest extends ExecRequestBase { action: 'clear_admin_token'; }
 interface LogsRequest extends ExecRequestBase { action: 'logs'; }
 interface ClearLogsRequest extends ExecRequestBase { action: 'clear_logs'; }
+interface PushNotifyRequest extends ExecRequestBase {
+  action: 'push_notify';
+  title?: string;
+  body?: string;
+  url?: string;
+  tag?: string;
+  icon?: string;
+  badge?: string;
+}
+interface PushStatsRequest extends ExecRequestBase { action: 'push_stats'; }
 
 type ExecRequest =
   | ClearCacheRequest
@@ -33,7 +45,9 @@ type ExecRequest =
   | SetAdminTokenRequest
   | ClearAdminTokenRequest
   | LogsRequest
-  | ClearLogsRequest;
+  | ClearLogsRequest
+  | PushNotifyRequest
+  | PushStatsRequest;
 
 // プロセス稼働中のみ有効な一時的管理者トークン (再デプロイ/再起動で消える)
 let ADMIN_TOKEN_OVERRIDE: string | null = null;
@@ -211,6 +225,56 @@ export async function POST(req: NextRequest) {
     } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       pushLog({ ts: new Date().toISOString(), action: 'custom_error', ip: clientIp(req), detail: { url, error: e?.message || String(e) } });
       return jsonError(`Fetch error: ${e?.message || e}`, 500);
+    }
+  }
+
+  // --- Web Push 通知送信 ---
+  if (payload.action === 'push_notify') {
+    const vapidOk = Boolean(process.env.WEB_PUSH_PUBLIC_KEY && process.env.WEB_PUSH_PRIVATE_KEY);
+    if (!vapidOk) return jsonError('VAPID keys missing', 500);
+    const { title, body, url, tag, icon, badge } = payload as PushNotifyRequest;
+    if (!title && !body) return jsonError('Missing title/body');
+    try {
+      const subs = await listSubscriptions();
+      let sent = 0;
+      let removed = 0;
+      await Promise.all(
+        subs.map(async (sub: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          try {
+            await webpush.sendNotification(sub, JSON.stringify({ title, body, url, tag, icon, badge }));
+            sent += 1;
+          } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            // 購読無効 (410/404) の場合クリーンアップ (Best-effort)
+            const status = (e && e.statusCode) || (e?.status);
+            if (status === 410 || status === 404) {
+              try {
+                const mod = await import('@/lib/pushStore');
+                // @ts-ignore optional
+                if (mod.removeSubscription) {
+                  // @ts-ignore
+                  await mod.removeSubscription(sub?.endpoint);
+                  removed += 1;
+                }
+              } catch {/* ignore */}
+            }
+          }
+        })
+      );
+      pushLog({ ts: new Date().toISOString(), action: 'push_notify', ip: clientIp(req), detail: { sent, removed } });
+      return NextResponse.json({ ok: true, status: 200, data: { sent, removed }, elapsedMs: Date.now() - started });
+    } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      pushLog({ ts: new Date().toISOString(), action: 'push_notify_error', ip: clientIp(req), detail: { error: e?.message || String(e) } });
+      return jsonError('Push send error', 500);
+    }
+  }
+
+  // --- Web Push 購読統計 ---
+  if (payload.action === 'push_stats') {
+    try {
+      const subs = await listSubscriptions();
+      return NextResponse.json({ ok: true, status: 200, data: { count: subs.length, backend: backendKind() }, elapsedMs: Date.now() - started });
+    } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      return jsonError('stats error', 500);
     }
   }
 

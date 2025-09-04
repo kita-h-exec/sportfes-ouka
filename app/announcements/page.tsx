@@ -1,5 +1,5 @@
 
-import { getAnnouncements } from '@/lib/directus';
+import { getAnnouncements, getAllAnnouncementsUnified } from '@/lib/directus';
 import AnnouncementsHeaderClient from '@/components/AnnouncementsHeaderClient';
 import AnnouncementsControls from '../../components/AnnouncementsControls';
 
@@ -13,6 +13,8 @@ interface Announcement {
   body: string;
   date_created: string;
   date_updated: string;
+  status?: string;
+  archived?: boolean;
 }
 
 const formatDate = (dateString: string) => {
@@ -38,8 +40,24 @@ const AnnouncementCard = ({ announcement }: { announcement: Announcement }) => {
 };
 
 export default async function AnnouncementsPage() {
-  const publishedAnnouncements = (await getAnnouncements('published')) as unknown as Announcement[];
-  const archivedAnnouncements = (await getAnnouncements('archived')) as unknown as Announcement[];
+  // 1) 既存の status 運用 (published / archived) を優先
+  // 2) もし status=published で archived=true のような二軸管理の場合に備えて unified を利用し再分類
+  const publishedStatus = (await getAnnouncements('published')) as unknown as Announcement[];
+  const archivedStatus = (await getAnnouncements('archived')) as unknown as Announcement[];
+
+  // unified で boolean archived が存在する場合に再分類
+  const unified = await getAllAnnouncementsUnified();
+  const hasBooleanArchived = unified.some(a => typeof (a as any).archived === 'boolean'); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  let publishedAnnouncements: Announcement[] = publishedStatus;
+  let archivedAnnouncements: Announcement[] = archivedStatus;
+
+  if (hasBooleanArchived) {
+    // boolean archived を信頼して再分類 (status 無視 or 併用)
+    const unifiedAnnouncements = unified as unknown as Announcement[];
+    publishedAnnouncements = unifiedAnnouncements.filter(a => !a.archived);
+    archivedAnnouncements = unifiedAnnouncements.filter(a => a.archived);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-32 pb-16">
