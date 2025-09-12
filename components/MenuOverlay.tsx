@@ -57,10 +57,10 @@ const MenuOverlay = () => {
                 <Link href="/announcements" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">お知らせ</Link>
               </motion.li>
               <motion.li variants={linkVariants}>
-                <Link href="/blocks" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">ブロック紹介</Link>
+                <Link href="/greetings" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">挨拶</Link>
               </motion.li>
               <motion.li variants={linkVariants}>
-                <Link href="/contents" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">企画紹介</Link>
+                <Link href="/blocks" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">ブロック紹介</Link>
               </motion.li>
               <motion.li variants={linkVariants}>
                 <Link href="/program" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">プログラム</Link>

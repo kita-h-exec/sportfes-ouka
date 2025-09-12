@@ -164,6 +164,8 @@ html.scroll-snap-disabled {
 /* Minimal Markdown body styles for chat rendering */
 .markdown-body {
   color: inherit;
+  white-space: normal; /* avoid preserving random line breaks */
+  word-break: break-word;
 }
 .markdown-body h1,
 .markdown-body h2,
@@ -175,6 +177,7 @@ html.scroll-snap-disabled {
 }
 .markdown-body p {
   margin: 0.25rem 0 0.75rem;
+  white-space: normal;
 }
 .markdown-body ul {
   list-style: disc;

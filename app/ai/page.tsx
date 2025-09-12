@@ -42,6 +42,27 @@ export default function AIPdfQA() {
     }
   }, [messages.length, tab]);
 
+  // Normalize AI answer to avoid excessive blank lines
+  const normalizeAnswer = useCallback((text: string) => {
+    if (!text) return text;
+    const sep = '```';
+    const parts = text.split(sep);
+    const norm = parts
+      .map((segment, idx) => {
+        // Leave code blocks (odd indices) untouched
+        if (idx % 2 === 1) return segment;
+        return segment
+          .replace(/\r\n/g, '\n')
+          // Collapse 3+ consecutive newlines to 2 (max one blank line)
+          .replace(/\n{3,}/g, '\n\n')
+          // Trim trailing spaces at end of lines
+          .replace(/[\t ]+\n/g, '\n')
+          .trim();
+      })
+      .join(sep);
+    return norm;
+  }, []);
+
   const ask = useCallback(async () => {
     const q = input.trim();
     if (!q) return;
@@ -56,9 +77,9 @@ export default function AIPdfQA() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q, doc: tab }),
       });
-      const data = await res.json();
+    const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'API Error');
-  const assistantMsg: Message = { role: 'assistant', content: data.answer, doc: tab };
+  const assistantMsg: Message = { role: 'assistant', content: normalizeAnswer(data.answer), doc: tab };
   setMessagesByTab((prev) => ({ ...prev, [tab]: [...prev[tab], assistantMsg] }));
     } catch (e: any) {
       const assistantMsg: Message = {
@@ -195,11 +216,13 @@ export default function AIPdfQA() {
                     transition={{ type: 'spring', stiffness: 160, damping: 18 }}
                     className="flex"
                   >
-                    <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 whitespace-pre-wrap ${
-                      m.role === 'user'
-                        ? 'ml-auto bg-black/80 text-white shadow-lg'
-                        : 'mr-auto bg-white/90 text-gray-900 shadow-lg'
-                    }`}>
+                    <div
+                      className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 ${
+                        m.role === 'user'
+                          ? 'whitespace-pre-wrap ml-auto bg-black/80 text-white shadow-lg'
+                          : 'whitespace-normal break-words mr-auto bg-white/90 text-gray-900 shadow-lg'
+                      }`}
+                    >
                       {m.role === 'assistant' ? (
                         <div className="markdown-body">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>

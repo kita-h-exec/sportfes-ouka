@@ -85,34 +85,47 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
   const targetKey = key(date);
   const scheduleForDate = schedules
     .filter(item => {
-      const itemDate = new Date(item.start_time);
+      // start_timeがなければend_timeで判定
+      const itemDate = item.start_time ? new Date(item.start_time) : (item.end_time ? new Date(item.end_time) : null);
+      if (!itemDate) return false;
       return key(itemDate) === targetKey;
     })
     .sort((a, b) => {
       if (a.is_all_day && !b.is_all_day) return -1;
       if (!a.is_all_day && b.is_all_day) return 1;
-      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+      // start_timeがなければend_timeで比較
+      const aTime = a.start_time ? new Date(a.start_time).getTime() : (a.end_time ? new Date(a.end_time).getTime() : 0);
+      const bTime = b.start_time ? new Date(b.start_time).getTime() : (b.end_time ? new Date(b.end_time).getTime() : 0);
+      return aTime - bTime;
     });
 
   const formatTime = (isoString: string) => {
+    if (!isoString) return '';
     const d = new Date(isoString);
     return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
   const calculateDuration = (start: string, end: string) => {
     if (!start || !end) return 0;
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDate = start ? new Date(start) : null;
+    const endDate = end ? new Date(end) : null;
+    if (!startDate || !endDate) return 0;
     const diffMs = endDate.getTime() - startDate.getTime();
     return Math.round(diffMs / 60000);
   };
 
   const isOngoing = (start: string, end: string) => {
-    if (!now || !start || !end) return false;
-    const startTime = new Date(start).getTime();
-    const endTime = new Date(end).getTime();
+    if (!now || (!start && !end)) return false;
+    const startTime = start ? new Date(start).getTime() : null;
+    const endTime = end ? new Date(end).getTime() : null;
     const nowTime = now.getTime();
-    return nowTime >= startTime && nowTime <= endTime;
+    if (startTime && endTime) {
+      return nowTime >= startTime && nowTime <= endTime;
+    } else if (!startTime && endTime) {
+      // 終了時間だけある場合、終了前なら進行中とみなす
+      return nowTime <= endTime;
+    }
+    return false;
   };
 
   return (
@@ -153,9 +166,18 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
                     <span className="font-bold text-sky-300">終日</span>
                   ) : (
                     <>
-                      <span>{formatTime(item.start_time)}</span>
-                      {item.end_time && <span className="mx-1">~</span>}
-                      {item.end_time && <span>{formatTime(item.end_time)}</span>}
+                      {item.start_time && (
+                        <>
+                          <span>{formatTime(item.start_time)}</span>
+                          {item.end_time && <span className="mx-1">~</span>}
+                          {item.end_time && <span>{formatTime(item.end_time)}</span>}
+                        </>
+                      )}
+                      {!item.start_time && item.end_time && (
+                        <>
+                          <span>{formatTime(item.end_time)}</span>
+                        </>
+                      )}
                       {duration > 0 && <span className="ml-4 text-xs text-gray-400">({duration}分)</span>}
                     </>
                   )}
