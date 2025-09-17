@@ -27,7 +27,7 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 				const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || // @ts-ignore
 					(navigator as any).standalone === true; // eslint-disable-line @typescript-eslint/no-explicit-any
 				const today = new Date().toISOString().slice(0,10);
-				const ENABLE_DAILY_SPLASH = false;
+				const ENABLE_DAILY_SPLASH = ture;
 				if (isStandalone) {
 					if (sessionStorage.getItem('splash_session_pwa') === '1') setSplashState('hide');
 					else setSplashState('show');
@@ -78,7 +78,7 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 					<div className="h-screen relative scroll-snap-section" />
 					<div className="relative z-10 pt-32 pb-10 scroll-snap-section">
 						<div className="container mx-auto px-4 space-y-12">
-							<CountdownTimer targetDate="2025-09-19T15:40:00" />
+							<CountdownTimer targetDate="2025-09-19T08:30:00" />
 							<Schedule />
 							<Contents />
 							<Blocks initialBlocks={initialBlocks} />
