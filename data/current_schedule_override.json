@@ -2,10 +2,13 @@
   "enabled": true,
   "item": {
     "id": 1,
-    "event": "テストなう",
-    "description": "",
     "start_time": "2025-09-17T12:00:00",
     "end_time": "2025-09-17T22:00:00",
-    "is_all_day": false
+    "event": "テストなう",
+    "description": "",
+    "is_all_day": false,
+    "_fields": [
+      "*"
+    ]
   }
 }
