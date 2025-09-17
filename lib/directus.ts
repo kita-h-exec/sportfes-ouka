@@ -364,6 +364,7 @@ export const getContents = async () => {
 
 // --- Schedules ---
 export interface DirectusScheduleItem {
+  id?: string | number;
   start_time?: string; // ISO
   end_time?: string | null;
   event?: string;
@@ -379,7 +380,7 @@ export interface DirectusScheduleItem {
 
 export const getSchedules = async (): Promise<DirectusScheduleItem[]> => {
   const fullFields = ['*'];
-  const minimalFields = ['start_time','end_time','event','description','is_all_day'];
+  const minimalFields = ['id','start_time','end_time','event','description','is_all_day'];
   let items: any[] | null = null; // eslint-disable-line @typescript-eslint/no-explicit-any
   let usedFields = fullFields;
   try {
@@ -435,6 +436,7 @@ export const getSchedules = async (): Promise<DirectusScheduleItem[]> => {
     const start = it.start_time || it.start;
     const end = it.end_time || it.end || null;
     return {
+      id: it.id,
       start_time: start,
       end_time: end,
       event: it.event || it.title || '(no title)',

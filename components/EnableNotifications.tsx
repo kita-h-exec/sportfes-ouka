@@ -20,24 +20,20 @@ export default function EnableNotifications() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | 'unknown'>('unknown');
-  // Track secure context without touching window during SSR
   const [secureContext, setSecureContext] = useState(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-  const ua = window.navigator.userAgent || '';
-  // iPadOS 13+ は Mac と名乗ることがあるため、maxTouchPoints と UA の "Mac" で補正（navigator.platform は非推奨）
-  const isMacLike = /Mac/.test(ua);
-  const isiOSLike = /iPad|iPhone|iPod/.test(ua) || (isMacLike && (navigator as any).maxTouchPoints > 1);
-    const standalone = (window.navigator as any).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-  const sw = 'serviceWorker' in navigator;
-  setIsIOS(isiOSLike);
+    const ua = window.navigator.userAgent || '';
+    const isMacLike = /Mac/.test(ua);
+    const isiOSLike = /iPad|iPhone|iPod/.test(ua) || (isMacLike && (navigator as any).maxTouchPoints > 1); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const standalone = (window.navigator as any).standalone === true || window.matchMedia('(display-mode: standalone)').matches; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const sw = 'serviceWorker' in navigator;
+    setIsIOS(isiOSLike);
     setIsStandalone(standalone);
     setSecureContext(window.isSecureContext);
-  // iOSはホーム画面に追加（standalone）でのみWeb Push対応。Notificationの存在で判定しない。
-  // 非iOSはService Workerがあれば概ねOK（pushManagerはsubscribe時に確認）。
-  const supp = isiOSLike ? (sw && standalone) : sw;
-  setSupported(supp);
+    const supp = isiOSLike ? (sw && standalone) : sw;
+    setSupported(supp);
     if ('Notification' in window) {
       setPermission(Notification.permission);
       if (Notification.permission === 'granted') setEnabled(true);
@@ -48,14 +44,11 @@ export default function EnableNotifications() {
     try {
       setLoading(true);
       if (!('serviceWorker' in navigator)) throw new Error('No serviceWorker');
-      // 明示的に権限リクエスト（iOS含む）
       if (Notification.permission === 'default') {
         const perm = await Notification.requestPermission();
         if (perm !== 'granted') throw new Error('permission denied');
       }
-
       const reg = await navigator.serviceWorker.ready;
-      // 一部環境では PushManager が window ではなく registration にのみ存在
       if (!('pushManager' in reg)) {
         alert('この環境ではプッシュ通知に対応していない可能性があります。iOSはホーム画面に追加後のみ有効です。');
         return;

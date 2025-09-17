@@ -8,6 +8,7 @@ import { CountdownTimer } from './CountdownTimer';
 import { Schedule } from './Schedule';
 import { Contents } from './Contents';
 import { Blocks } from './Blocks';
+import NowPlaying from './NowPlaying';
 
 // Home ロジックをサーバー/クライアント分離したい場合のクライアント側コンテナ。
 // 現状 <ContentsServer> など存在しない幽霊参照による警告を避けるためここで明示的に正しい構成を定義。
@@ -27,7 +28,7 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 				const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || // @ts-ignore
 					(navigator as any).standalone === true; // eslint-disable-line @typescript-eslint/no-explicit-any
 				const today = new Date().toISOString().slice(0,10);
-				const ENABLE_DAILY_SPLASH = ture;
+				const ENABLE_DAILY_SPLASH = true;
 				if (isStandalone) {
 					if (sessionStorage.getItem('splash_session_pwa') === '1') setSplashState('hide');
 					else setSplashState('show');
@@ -75,7 +76,10 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 			{splashState === 'hide' && (
 				<>
 					<Header isScrolled={isScrolled} />
-					<div className="h-screen relative scroll-snap-section" />
+															<div className="h-screen relative scroll-snap-section">
+																{/* ビューポート基準の上寄せ位置に現在進行中の予定を表示 */}
+																<NowPlaying isScrolled={isScrolled} />
+															</div>
 					<div className="relative z-10 pt-32 pb-10 scroll-snap-section">
 						<div className="container mx-auto px-4 space-y-12">
 							<CountdownTimer targetDate="2025-09-19T08:30:00" />

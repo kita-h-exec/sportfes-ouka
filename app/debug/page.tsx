@@ -38,6 +38,34 @@ export default function DebugPage() {
   const [annTemplates, setAnnTemplates] = useState<any[] | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [annLoading, setAnnLoading] = useState(false);
   const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
+  // schedules debug
+  const [overrideEnabled, setOverrideEnabled] = useState(false);
+  const [overrideItem, setOverrideItem] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [template, setTemplate] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [order, setOrder] = useState<(string|number)[]>([]);
+  const [schedLoading, setSchedLoading] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [currentId, setCurrentId] = useState<string | number | null>(null);
+
+  function normalizeOrder(tpl: any[], saved: (string|number)[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const ids = tpl.map(t => String(t.id));
+    const uniqSaved = Array.from(new Set(saved.map(x => String(x)))).filter(id => ids.includes(id));
+    const missing = ids.filter(id => !uniqSaved.includes(id));
+    return [...uniqSaved, ...missing];
+  }
+
+  const orderedTemplate = (() => {
+    if (!template || template.length === 0) return [] as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const ord = (order && order.length) ? order.map(x => String(x)) : template.map(t => String(t.id));
+    const map = new Map(template.map(t => [String(t.id), t]));
+    const list = ord.map(id => map.get(id)).filter(Boolean) as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    // もしテンプレ更新で足りないIDがあれば末尾に追加
+    if (list.length < template.length) {
+      const missing = template.filter(t => !ord.includes(String(t.id)));
+      return [...list, ...missing];
+    }
+    return list;
+  })();
 
   async function checkAuth(pw: string) {
     setAuthError(null);
@@ -385,6 +413,184 @@ export default function DebugPage() {
         <section className="space-y-2 text-[11px] text-slate-500">
           <p>このページはパスワードで保護されています。追加で IP / Basic 認証を推奨。</p>
           <pre className="bg-slate-900/70 border border-slate-700 p-3 rounded">DEBUG_PASSWORD=your_password_here</pre>
+        </section>
+
+        {/* Schedules debug */}
+        <section className="space-y-4 bg-slate-800/60 border border-slate-700 rounded-lg p-5">
+          <h2 className="text-lg font-semibold">現在進行中の予定 / 並び替え</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={async () => {
+                setSchedLoading(true);
+                try {
+                  const [ov, tp, ord, cur] = await Promise.all([
+                    fetch('/api/schedules/override', { cache: 'no-store' }).then(r => r.json()),
+                    fetch('/api/schedules/template', { cache: 'no-store' }).then(r => r.json()),
+                    fetch('/api/schedules/order', { cache: 'no-store' }).then(r => r.json()),
+                    fetch('/api/schedules/current', { cache: 'no-store' }).then(r => r.json()),
+                  ]);
+                  if (ov.ok) { setOverrideEnabled(ov.data.enabled); setOverrideItem(ov.data.item); }
+                  if (tp.ok) { setTemplate(tp.data || []); }
+                  if (cur.ok) { setCurrentId(cur.data?.id ?? null); }
+                  if (ord.ok) {
+                    const full = normalizeOrder(tp.data || [], (ord.data?.order)||[]);
+                    setOrder(full);
+                  } else if (tp.ok) {
+                    setOrder((tp.data || []).map((t:any)=>String(t.id))); // eslint-disable-line @typescript-eslint/no-explicit-any
+                  }
+                  setPreviewIndex(null);
+                } finally { setSchedLoading(false); }
+              }}
+              className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700"
+              disabled={schedLoading}
+            >{schedLoading ? '取得中…' : 'テンプレ/設定読込'}</button>
+            <button
+              onClick={async () => {
+                // 現在進行中の次へ
+                if (!orderedTemplate.length) return;
+                const ids = orderedTemplate.map(t => String(t.id));
+                const idx = currentId ? ids.indexOf(String(currentId)) : -1;
+                const nextIdx = (idx >= 0 && idx + 1 < ids.length) ? idx + 1 : (ids.length > 0 ? 0 : -1);
+                if (nextIdx < 0) return;
+                const t = orderedTemplate[nextIdx];
+                setSchedLoading(true);
+                try {
+                  const body = { enabled: true, item: { id: t.id, event: t.event || t.title, description: t.description || '', start_time: t.start_time || null, end_time: t.end_time || null, is_all_day: t.is_all_day || false } };
+                  const res = await fetch('/api/schedules/override', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify(body) });
+                  if (res.ok) setCurrentId(String(t.id)); else alert('移動失敗');
+                } finally { setSchedLoading(false); }
+              }}
+              className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700"
+              disabled={schedLoading}
+            >次の予定に移動</button>
+            <button
+              onClick={async () => {
+                // 現在進行中の前へ
+                if (!orderedTemplate.length) return;
+                const ids = orderedTemplate.map(t => String(t.id));
+                const idx = currentId ? ids.indexOf(String(currentId)) : -1;
+                const prevIdx = (idx > 0) ? idx - 1 : (ids.length > 0 ? ids.length - 1 : -1);
+                if (prevIdx < 0) return;
+                const t = orderedTemplate[prevIdx];
+                setSchedLoading(true);
+                try {
+                  const body = { enabled: true, item: { id: t.id, event: t.event || t.title, description: t.description || '', start_time: t.start_time || null, end_time: t.end_time || null, is_all_day: t.is_all_day || false } };
+                  const res = await fetch('/api/schedules/override', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify(body) });
+                  if (res.ok) setCurrentId(String(t.id)); else alert('移動失敗');
+                } finally { setSchedLoading(false); }
+              }}
+              className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700"
+              disabled={schedLoading}
+            >前の予定に戻す</button>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <h3 className="font-semibold">手動上書き</h3>
+              <label className="inline-flex items-center gap-2 text-xs"><input type="checkbox" checked={overrideEnabled} onChange={e => setOverrideEnabled(e.target.checked)} /><span>有効</span></label>
+              <div className="text-xs space-y-2">
+                <input className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1" placeholder="タイトル" value={overrideItem?.event||''} onChange={e => setOverrideItem({ ...(overrideItem||{}), event: e.target.value })} />
+                <input className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1" placeholder="開始 (ISO)" value={overrideItem?.start_time||''} onChange={e => setOverrideItem({ ...(overrideItem||{}), start_time: e.target.value })} />
+                <input className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1" placeholder="終了 (ISO)" value={overrideItem?.end_time||''} onChange={e => setOverrideItem({ ...(overrideItem||{}), end_time: e.target.value })} />
+                <textarea className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1" rows={2} placeholder="説明" value={overrideItem?.description||''} onChange={e => setOverrideItem({ ...(overrideItem||{}), description: e.target.value })} />
+                <label className="inline-flex items-center gap-2 text-xs"><input type="checkbox" checked={overrideItem?.is_all_day||false} onChange={e => setOverrideItem({ ...(overrideItem||{}), is_all_day: e.target.checked })} /><span>終日</span></label>
+                <div>
+                  <button
+                    onClick={async () => {
+                      setSchedLoading(true);
+                      try {
+                        const res = await fetch('/api/schedules/override', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify({ enabled: overrideEnabled, item: overrideItem }) });
+                        if (!res.ok) alert('保存失敗');
+                      } finally { setSchedLoading(false); }
+                    }}
+                    className="text-xs px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500"
+                    disabled={schedLoading}
+                  >保存</button>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold">テンプレ順（直感操作）</h3>
+              <div className="text-[10px] text-slate-400">各行の「次にする」を押すと、そのIDが順序の先頭に積まれます（重複は自動排除）。下のテキストは編集補助です。</div>
+              <textarea className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs font-mono" rows={3} value={order.join(',')} onChange={e => setOrder(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    setSchedLoading(true);
+                    try {
+                      const res = await fetch('/api/schedules/order', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-debug-password': password }, body: JSON.stringify({ order }) });
+                      if (!res.ok) alert('保存失敗');
+                    } finally { setSchedLoading(false); }
+                  }}
+                  className="text-xs px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500"
+                  disabled={schedLoading}
+                >順序保存</button>
+                <span className="text-[10px] text-slate-400">テンプレ件数: {template?.length||0}</span>
+              </div>
+              <div className="h-56 overflow-auto text-[11px] bg-slate-900/60 border border-slate-700 rounded p-2">
+                {orderedTemplate.map((t:any, i:number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+                  // 行操作はプレビューと上下移動のみ
+                  const showPreview = () => {
+                    const idx = orderedTemplate.findIndex((x:any) => String(x.id) === String(t.id)); // eslint-disable-line @typescript-eslint/no-explicit-any
+                    setPreviewIndex(idx);
+                  };
+                  const moveUp = () => {
+                    setOrder(prev => {
+                      const arr = [...(prev.length ? prev.map(x => String(x)) : template.map((x:any)=>String(x.id)))]; // eslint-disable-line @typescript-eslint/no-explicit-any
+                      const id = String(t.id);
+                      const idx = arr.indexOf(id);
+                      if (idx > 0) {
+                        [arr[idx-1], arr[idx]] = [arr[idx], arr[idx-1]];
+                      }
+                      return normalizeOrder(template, arr);
+                    });
+                  };
+                  const moveDown = () => {
+                    setOrder(prev => {
+                      const arr = [...(prev.length ? prev.map(x => String(x)) : template.map((x:any)=>String(x.id)))]; // eslint-disable-line @typescript-eslint/no-explicit-any
+                      const id = String(t.id);
+                      const idx = arr.indexOf(id);
+                      if (idx >= 0 && idx < arr.length - 1) {
+                        [arr[idx+1], arr[idx]] = [arr[idx], arr[idx+1]];
+                      }
+                      return normalizeOrder(template, arr);
+                    });
+                  };
+                  const isCurrent = currentId !== null && String(currentId) === String(t.id);
+                  return (
+                    <div key={t.id} className={"flex items-center gap-2 py-0.5 border-b border-slate-800 last:border-b-0 rounded " + (isCurrent ? 'bg-emerald-900/20 ring-1 ring-emerald-700/40' : '')}>
+                      <span className="text-slate-500 w-6 shrink-0 text-right">{i+1}</span>
+                      <span className="text-slate-500 w-12 shrink-0">#{t.id}</span>
+                      <span className="text-slate-200 flex-1 min-w-0 truncate">{t.event || t.title}</span>
+                      <span className="text-slate-500 shrink-0">{t.start_time?.slice(11,16)}~{t.end_time?.slice(11,16)}</span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={moveUp} className="text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-700">↑</button>
+                        <button onClick={moveDown} className="text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-700">↓</button>
+                        <button onClick={showPreview} className="text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-700">前後</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {previewIndex !== null && template[previewIndex] && (
+                <div className="mt-2 text-[11px] bg-slate-900/70 border border-slate-700 rounded p-2 space-y-1">
+                  <div className="text-slate-400">プレビュー（前後）</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[-1,0,1].map(offset => {
+                      const idx = previewIndex! + offset;
+                      const it = template[idx];
+                      if (!it) return <div key={offset} className="h-16 rounded bg-slate-800/50 border border-slate-700/60" />;
+                      return (
+                        <div key={offset} className={"p-2 rounded border " + (offset===0 ? 'bg-emerald-900/20 border-emerald-700/50' : 'bg-slate-800/50 border-slate-700/60')}>
+                          <div className="text-slate-300 truncate">{it.event || it.title}</div>
+                          <div className="text-slate-500">{it.start_time?.slice(11,16)}~{it.end_time?.slice(11,16)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </section>
       </div>
     </div>
