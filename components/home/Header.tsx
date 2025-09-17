@@ -9,13 +9,14 @@ import { useMenu } from '@/components/useMenu';
 interface HeaderProps {
   isScrolled: boolean;
   forceBlackText?: boolean;
+  forceWhiteTitle?: boolean; // Dashboard用: タイトル文字だけ常に白
 }
 
 interface Announcement {
   title: string;
 }
 
-const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
+const Header = ({ isScrolled, forceBlackText, forceWhiteTitle }: HeaderProps) => {
   const { isMenuOpen } = useMenu();
   const [headerAnnouncement, setHeaderAnnouncement] = useState<Announcement | null>(null);
 
@@ -40,6 +41,7 @@ const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
     : 'bg-transparent';
 
   const textColor = forceBlackText || isScrolled || isMenuOpen ? '#333' : '#fff';
+  const titleColor = forceWhiteTitle ? '#fff' : textColor;
 
   return (
     <>
@@ -54,7 +56,7 @@ const Header = ({ isScrolled, forceBlackText }: HeaderProps) => {
             <Link href="/">
               <h1
                 className="transition-colors duration-300"
-                style={{ color: textColor }}
+                style={{ color: titleColor }}
               >
                 うんどう会
               </h1>

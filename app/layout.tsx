@@ -13,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const { scrollY } = useScroll();
   const pathname = usePathname();
   const shouldForceBlackText = pathname.startsWith('/blocks') || pathname.startsWith('/announcements') || pathname.startsWith('/ai');
+  const forceWhiteTitle = pathname.startsWith('/dashboard');
   const hideFooter = pathname.startsWith('/youkou');
   const [isClient, setIsClient] = useState(false);
 
@@ -89,7 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             className="fixed top-0 left-0 w-full h-screen bg-cover bg-center z-0"
             style={{ backgroundImage: "url('/splash-background.jpg')" }}
           />
-          <Header isScrolled={isScrolled} forceBlackText={shouldForceBlackText} />
+          <Header isScrolled={isScrolled} forceBlackText={shouldForceBlackText} forceWhiteTitle={forceWhiteTitle} />
           <MenuOverlay />
 
           <main className="relative z-10">{children}</main>
