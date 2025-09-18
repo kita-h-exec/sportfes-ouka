@@ -22,17 +22,28 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 
 	useEffect(() => { window.scrollTo(0,0); }, []);
 
+	// ローカルタイムの YYYY-MM-DD を返す（UTCズレを避ける）
+	const getTodayLocal = () => {
+		const d = new Date();
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${y}-${m}-${day}`;
+	};
+
 	useEffect(() => {
 		const decide = () => {
 			try {
 				const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || // @ts-ignore
 					(navigator as any).standalone === true; // eslint-disable-line @typescript-eslint/no-explicit-any
-				const today = new Date().toISOString().slice(0,10);
-				const ENABLE_DAILY_SPLASH = true;
 				if (isStandalone) {
-					if (sessionStorage.getItem('splash_session_pwa') === '1') setSplashState('hide');
+					// PWA: 1日1回のみ表示
+					const today = getTodayLocal();
+					const lastShown = localStorage.getItem('splashShownOn_pwa');
+					if (lastShown === today) setSplashState('hide');
 					else setSplashState('show');
 				} else {
+					// Web（非PWA）: これまで通り初回のみ表示
 					if (localStorage.getItem('splashSeen_v1_web')) setSplashState('hide');
 					else setSplashState('show');
 				}
@@ -66,8 +77,15 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 				{isLoading && (
 					<SplashScreen onAnimationComplete={() => {
 						try {
-							sessionStorage.setItem('splash_session_pwa','1');
-							localStorage.setItem('splashSeen_v1_web','1');
+							// PWA: 本日表示済みの日付を保存
+							const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || // @ts-ignore
+								(navigator as any).standalone === true; // eslint-disable-line @typescript-eslint/no-explicit-any
+							if (isStandalone) {
+								localStorage.setItem('splashShownOn_pwa', getTodayLocal());
+							} else {
+								// Web: 従来通り一度だけ
+								localStorage.setItem('splashSeen_v1_web','1');
+							}
 						} catch {}
 						setSplashState('hide');
 					}} />
