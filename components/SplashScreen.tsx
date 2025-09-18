@@ -37,7 +37,7 @@ export const SplashScreen = ({ onAnimationComplete }: { onAnimationComplete: () 
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] h-screen w-screen bg-white dark:bg-background-dark"
+      className="fixed inset-0 z-[100] h-screen w-screen bg-white dark:bg-background-dark pointer-events-none"
       // This exit animation will be triggered by AnimatePresence in the parent
       exit={{ opacity: 0, transition: { duration: 0.8 } }}
     >
