@@ -82,7 +82,14 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 															</div>
 					<div className="relative z-10 pt-32 pb-10 scroll-snap-section">
 						<div className="container mx-auto px-4 space-y-12">
-							<CountdownTimer targetDate="2025-09-19T08:30:00" />
+							<CountdownTimer
+								targetDate="2025-09-19T08:30:00"
+								events={[
+									{ date: '2025-09-19', message: 'うんどう会 1日目！' },
+									{ date: '2025-09-20', message: 'うんどう会 2日目！' },
+								]}
+								endedMessage="うんどう会は終了しました"
+							/>
 							<Schedule />
 							<Contents />
 							<Blocks initialBlocks={initialBlocks} />

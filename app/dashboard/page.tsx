@@ -375,6 +375,10 @@ function SchedulesManagerCard({ password }: { password: string }) {
   const [customEnd, setCustomEnd] = useState(''); // datetime-local
   const [customAllDay, setCustomAllDay] = useState(false);
   const [treatNow, setTreatNow] = useState(false);
+  // NowPlaying settings
+  const [npLoading, setNpLoading] = useState(false);
+  const [showAllOngoing, setShowAllOngoing] = useState(false);
+  const [hiddenIds, setHiddenIds] = useState<Array<string | number>>([]);
 
   async function load() {
     setLoading(true);
@@ -415,6 +419,20 @@ function SchedulesManagerCard({ password }: { password: string }) {
   }
 
   useEffect(() => { load(); }, []);
+
+  // load NowPlaying settings
+  async function loadNowPlaying() {
+    setNpLoading(true);
+    try {
+      const res = await fetch('/api/now-playing', { cache: 'no-store' });
+      const j = await res.json().catch(() => null);
+      if (res.ok && j?.ok) {
+        setShowAllOngoing(Boolean(j.data?.showAllOngoing));
+        setHiddenIds(Array.isArray(j.data?.hiddenIds) ? j.data.hiddenIds : []);
+      }
+    } finally { setNpLoading(false); }
+  }
+  useEffect(() => { loadNowPlaying(); }, []);
 
   function getVisibleOrder(): SItem[] {
     const byId = new Map<string, SItem>();
@@ -576,6 +594,27 @@ function SchedulesManagerCard({ password }: { password: string }) {
   };
 
   const visibleList = visible;
+  const ongoingLite = visibleList.filter(it => isOngoingById(it) || isOngoingLite(it));
+  const isHidden = (id: string | number | undefined) => id == null ? false : hiddenIds.some(x => String(x) === String(id));
+  const toggleHidden = (id: string | number | undefined, hide: boolean) => {
+    if (id == null) return;
+    setHiddenIds(prev => {
+      const s = new Set(prev.map(x => String(x)));
+      if (hide) s.add(String(id)); else s.delete(String(id));
+      return Array.from(s);
+    });
+  };
+  const saveNowPlaying = async () => {
+    setNpLoading(true);
+    try {
+      const res = await fetch('/api/now-playing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-debug-password': password },
+        body: JSON.stringify({ showAllOngoing, hiddenIds }),
+      });
+      await res.json().catch(() => null);
+    } finally { setNpLoading(false); }
+  };
 
   return (
     <section className="space-y-4 bg-slate-800/60 border border-slate-700 rounded-xl p-5 shadow-inner xl:col-span-3">
@@ -643,6 +682,34 @@ function SchedulesManagerCard({ password }: { password: string }) {
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* NowPlaying 表示設定 */}
+      <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-4 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="font-semibold">NowPlaying 表示設定</h3>
+          <div className="flex items-center gap-2 text-xs">
+            <button onClick={loadNowPlaying} disabled={npLoading} className="px-3 py-1 rounded border border-slate-600 hover:bg-slate-700 disabled:opacity-50">更新</button>
+            <button onClick={saveNowPlaying} disabled={npLoading} className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50">保存</button>
+          </div>
+        </div>
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={showAllOngoing} onChange={e => setShowAllOngoing(e.target.checked)} />
+          <span>現在進行中の予定を全て表示（ON: 全件, OFF: 1件）</span>
+        </label>
+        <div className="text-xs text-slate-400">個別の表示切替（ON: 表示, OFF: 非表示）</div>
+        <div className="grid md:grid-cols-2 gap-2">
+          {ongoingLite.length === 0 && <div className="text-sm text-slate-400">進行中の予定はありません</div>}
+          {ongoingLite.map(it => (
+            <label key={String(it.id)} className="flex items-center justify-between gap-2 px-3 py-2 rounded border border-slate-700 bg-slate-800/40">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{it.event || '(no title)'} <span className="text-[10px] text-slate-500">#{String(it.id)}</span></div>
+                <div className="text-[11px] text-slate-400">{it.is_all_day ? '終日' : `${timeHM(it.start_time)}${it.end_time ? ` ~ ${timeHM(it.end_time)}` : ''}`}</div>
+              </div>
+              <input type="checkbox" checked={!isHidden(it.id)} onChange={e => toggleHidden(it.id, !e.target.checked)} />
+            </label>
+          ))}
         </div>
       </div>
 
