@@ -24,11 +24,11 @@ const programs: DayProgram[] = [
       { start: '7:30', title: '作業開始' },
       { start: '8:20', end: '8:30', title: 'SHR' },
       { start: '8:30', end: '8:45', title: '開会式' },
-      { start: '8:45', end: '9:05', title: '準備・休憩', note: '20分' },
+      { start: '8:45', end: '9:05', title: '準備・休憩' },
       { start: '9:05', end: '9:35', title: 'SCAT' },
-      { start: '9:35', end: '9:45', title: '移動', note: '10分' },
+      { start: '9:35', end: '9:45', title: '移動' },
       { start: '9:45', end: '10:00', title: 'もぎたま' },
-      { start: '10:00', end: '10:20', title: '休憩 / 準備', note: '20分' },
+      { start: '10:00', end: '10:20', title: '休憩 / 準備' },
       { start: '10:20', end: '10:45', title: '団対助熱' },
       { start: '10:45', end: '15:20', title: '作業' },
       { start: '15:20', end: '15:30', title: 'SHR' },
@@ -41,12 +41,12 @@ const programs: DayProgram[] = [
       { start: '7:20', title: '更衣室解放' },
       { start: '7:30', title: '作業開始' },
       { start: '8:10', end: '8:15', title: 'SHR' },
-      { start: '8:15', end: '8:25', title: '中間発表', note: '凸場にて' },
-      { start: '8:25', end: '8:45', title: '準備・休憩', note: '20分間' },
+      { start: '8:15', end: '8:25', title: '中間発表' },
+      { start: '8:25', end: '8:45', title: '準備・休憩', },
       { start: '8:45', end: '10:05', title: 'ST' },
-      { start: '10:05', end: '10:25', title: '休憩 / 準備', note: '20分間' },
+      { start: '10:05', end: '10:25', title: '休憩 / 準備' },
       { start: '10:25', end: '11:05', title: '綱引き' },
-      { start: '11:05', end: '11:20', title: '休憩 / 準備', note: '15分' },
+      { start: '11:05', end: '11:20', title: '休憩 / 準備' },
       { start: '11:20', end: '11:25', title: 'スウェーデンリレー' },
       { start: '11:25', end: '12:25', title: '昼休み / デコ解放' },
       { start: '12:25', end: '12:35', title: '七長ダンス' },
@@ -60,6 +60,13 @@ const programs: DayProgram[] = [
 
 export default function ProgramPage() {
   const [activeDay, setActiveDay] = useState(0);
+  // 今日が9/19かどうか（monthは0始まりなので9月は8）
+  const isSep19Today = (() => {
+    const now = new Date();
+    return now.getMonth() === 8 && now.getDate() === 19;
+  })();
+  // programs内の9/19のインデックスを取得（表示切替用）
+  const sep19Index = programs.findIndex((d) => d.dateLabel.includes('9月19日'));
 
   // 強制的に背景を常時ブラーさせる
   useEffect(() => {
@@ -92,6 +99,11 @@ export default function ProgramPage() {
               className={`relative px-6 py-3 rounded-full text-sm md:text-base font-semibold transition-all backdrop-blur-md border ${(i===activeDay?'bg-white/90 text-gray-900 shadow-xl':'bg-white/15 hover:bg-white/25 text-white border-white/30')}`}
             >
               {d.dateLabel}
+              {d.dateLabel.includes('9月19日') && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-red-600/90 text-white px-2 py-0.5 text-[10px] leading-none tracking-wider shadow-sm">
+                  来場不可
+                </span>
+              )}
               {i===activeDay && (
                 <motion.span layoutId="dayIndicator" className="absolute inset-0 rounded-full border-2 border-fuchsia-500 pointer-events-none" style={{ boxShadow: '0 0 0 4px rgba(236,72,153,0.25)' }} />
               )}
@@ -100,6 +112,11 @@ export default function ProgramPage() {
         </div>
 
         <div className="relative">
+          {activeDay === sep19Index && (
+            <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/15 text-red-200 px-4 py-3 text-sm md:text-base">
+              {isSep19Today ? '本日は来場を受け付けていません。' : '9/19日は来場を受け付けていません。'}
+            </div>
+          )}
           <AnimatePresence mode="wait">
             <motion.ul
               key={activeDay}
