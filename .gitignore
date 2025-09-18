@@ -89,3 +89,6 @@ directus/backups/
 
 # local pdf assets (commit only if needed)
 public/*.pdf
+
+data/current_schedule_override.json
+data/push_subscriptions.json
