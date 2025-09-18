@@ -100,43 +100,39 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
     const previewTime = `${formatHM((first as any)?.start_time)}${(first as any)?.end_time ? ` ~ ${formatHM((first as any)?.end_time)}` : ''}`; // eslint-disable-line @typescript-eslint/no-explicit-any
     return (
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-cyan-400/10 to-indigo-400/10 blur-xl rounded-2xl" aria-hidden />
-        <div className="relative backdrop-blur bg-white/6 text-white rounded-xl border border-white/15 shadow-lg overflow-hidden">
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="min-w-0">
+        <div className="relative backdrop-blur-md bg-black/55 text-white rounded-xl border border-white/10 shadow-xl overflow-hidden">
+          <div className="px-4 py-2">
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
                 <div className="text-[11px] text-white/80">次の予定のキュー</div>
                 {!queueExpanded && (
-                  <div className="text-xs text-white/80 truncate mt-0.5">
+                  <div className="text-xs text-white/90 truncate mt-0.5 flex items-center gap-2">
                     {queue && queue.length > 0 ? (
                       <>
-                        <span className="inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full bg-white/70 text-black text-[10px] font-bold ring-2 ring-white/30">次</span>
-                        <span className="font-medium">{previewTitle}</span>
-                        <span className="ml-2">{previewTime}</span>
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white text-black text-[10px] font-bold">次</span>
+                        <span className="font-semibold truncate">{previewTitle}</span>
+                        <span className="shrink-0 text-white/80">{previewTime}</span>
                       </>
                     ) : (
-                      <span>（キューなし）</span>
+                      <span className="text-white/70">（キューなし）</span>
                     )}
                   </div>
                 )}
               </div>
-            </div>
-            {/* 上部トグルは折り畳み時のみ表示 */}
-            {!queueExpanded && (
-              <div className="mt-1 relative py-1">
-                <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+              {/* 右側の小さなトグルボタン */}
+              {!queueExpanded && (
                 <button
                   type="button"
                   onClick={() => setQueueExpanded(true)}
                   aria-label={'キューを展開する'}
-                  className="relative z-10 mx-auto block w-10 h-10 rounded-full backdrop-blur bg-white/10 border border-white/20 shadow-sm hover:bg-white/15 hover:shadow transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md bg-white/10 hover:bg-white/15 border border-white/15 text-white/90"
                 >
-                  <svg viewBox="0 0 24 24" className={`mx-auto h-5 w-5 text-white/80 transition-transform duration-300`} role="img" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" role="img" aria-hidden="true">
                     <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
-              </div>
-            )}
+              )}
+            </div>
             <AnimatePresence initial={false}>
               {queueExpanded && queue && queue.length > 0 && (
                 <motion.div
@@ -149,9 +145,9 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
                 >
                   <div className={`mt-3 grid grid-cols-1 md:grid-cols-3 gap-3`}>
                     {queue.map((q, i) => (
-                      <div key={String((q as any)?.id ?? i)} className={`rounded-lg bg-white/8 p-3 border border-white/10`}> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
+                      <div key={String((q as any)?.id ?? i)} className={`rounded-lg bg-black/40 p-3 border border-white/10`}> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
                         <div className="flex items-center gap-3">
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/70 text-black text-[10px] font-bold ring-2 ring-white/30">{i === 0 ? '次' : '予'}</span>
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white text-black text-[10px] font-bold">{i === 0 ? '次' : '予'}</span>
                           <div className="min-w-0 flex-1">
                             <div className={`truncate text-sm font-semibold`}>{(q as any)?.event || '(no title)'}</div> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
                             <div className={`text-xs text-white/80`}>{formatHM((q as any)?.start_time)}{(q as any)?.end_time ? ` ~ ${formatHM((q as any)?.end_time)}` : ''}</div> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
@@ -161,16 +157,15 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
                       </div>
                     ))}
                   </div>
-                  {/* 下部トグル（横ライン + 中央丸ボタン, 上向き） */}
-                  <div className="mt-2 relative py-1">
-                    <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+                  {/* 右上の折り畳みトグル */}
+                  <div className="flex justify-end mt-2">
                     <button
                       type="button"
                       onClick={() => setQueueExpanded(false)}
                       aria-label="キューを折り畳む"
-                      className="relative z-10 mx-auto block w-10 h-10 rounded-full backdrop-blur bg-white/10 border border-white/20 shadow-sm hover:bg-white/15 hover:shadow transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-white/10 hover:bg-white/15 border border-white/15 text-white/90"
                     >
-                      <svg viewBox="0 0 24 24" className="mx-auto h-5 w-5 text-white/80 transition-transform duration-300 rotate-180" role="img" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 rotate-180" role="img" aria-hidden="true">
                         <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
@@ -196,12 +191,12 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
           className="fixed left-0 right-0 bottom-16 md:bottom-24 z-30"
         >
           <div className="max-w-6xl mx-auto px-4 space-y-3 pb-[env(safe-area-inset-bottom)]">
-            <div className="backdrop-blur-xl bg-white/10 text-white rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
+            <div className="backdrop-blur-md bg-black/60 text-white rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
               <div className="px-5 py-4 flex items-start gap-4">
                 <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-slate-300 text-black text-sm font-extrabold ring-4 ring-slate-300/20">待</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-white/80">現在進行中の予定はありません</div>
-                  <div className="text-lg md:text-xl font-bold tracking-tight truncate">次の予定をお待ちください</div>
+                  <div className="text-sm text-white/90">現在進行中の予定はありません</div>
+                  <div className="text-lg md:text-xl font-bold tracking-tight truncate text-white">次の予定をお待ちください</div>
                 </div>
               </div>
             </div>
@@ -214,6 +209,23 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
   }
 
   const timeStr = item.is_all_day ? '終日' : `${formatHM(item.start_time)}${item.end_time ? ` ~ ${formatHM(item.end_time)}` : ''}`;
+
+  // 進捗率（開始/終了がある場合のみ）
+  function ProgressBar({ start, end }: { start?: string | null; end?: string | null }) {
+    if (!start || !end) return null;
+    let pct = 0;
+    try {
+      const s = new Date(start).getTime();
+      const e = new Date(end).getTime();
+      const now = Date.now();
+      if (e > s) pct = Math.min(100, Math.max(0, ((now - s) / (e - s)) * 100));
+    } catch {/* ignore */}
+    return (
+      <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden" aria-hidden>
+        <div className="h-full bg-yellow-300" style={{ width: `${pct}%` }} />
+      </div>
+    );
+  }
 
   // 全件表示ON時: 一覧 + キュー
   if (settings?.showAllOngoing) {
@@ -232,26 +244,27 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
               list.map((it, idx) => {
                 const tStr = it?.is_all_day ? '終日' : `${formatHM(it?.start_time)}${it?.end_time ? ` ~ ${formatHM(it?.end_time)}` : ''}`;
                 return (
-                  <div key={String((it as any)?.id ?? idx)} className="backdrop-blur-xl bg-white/10 text-white rounded-2xl border border-white/20 shadow-2xl overflow-hidden">{/* eslint-disable-line @typescript-eslint/no-explicit-any */}
+                  <div key={String((it as any)?.id ?? idx)} className="backdrop-blur-md bg-black/60 text-white rounded-2xl border border-white/10 shadow-2xl overflow-hidden">{/* eslint-disable-line @typescript-eslint/no-explicit-any */}
                     <div className="px-5 py-4 flex items-start gap-4">
                       <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-yellow-300 text-black text-sm font-extrabold ring-4 ring-yellow-300/20">今</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm text-white/80">現在進行中の予定</div>
-                        <div className="text-lg md:text-xl font-bold tracking-tight truncate">{it?.event || '(no title)'}</div>
-                        <div className="text-xs md:text-sm text-white/80 mt-0.5">{tStr}</div>
+                        <div className="text-sm text-white/90">現在進行中の予定</div>
+                        <div className="text-lg md:text-xl font-bold tracking-tight truncate text-white">{it?.event || '(no title)'}</div>
+                        <div className="text-xs md:text-sm text-white/85 mt-0.5">{tStr}</div>
                         {it?.description && <div className="text-xs md:text-sm text-white/80 mt-1 line-clamp-2">{it?.description}</div>}
+                        <ProgressBar start={it?.start_time ?? null} end={it?.end_time ?? null} />
                       </div>
                     </div>
                   </div>
                 );
               })
             ) : (
-              <div className="backdrop-blur-xl bg-white/10 text-white rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
+              <div className="backdrop-blur-md bg-black/60 text-white rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
                 <div className="px-5 py-4 flex items-start gap-4">
                   <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-slate-300 text-black text-sm font-extrabold ring-4 ring-slate-300/20">待</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white/80">現在進行中の予定はありません</div>
-                    <div className="text-lg md:text-xl font-bold tracking-tight truncate">次の予定をお待ちください</div>
+                    <div className="text-sm text-white/90">現在進行中の予定はありません</div>
+                    <div className="text-lg md:text-xl font-bold tracking-tight truncate text-white">次の予定をお待ちください</div>
                   </div>
                 </div>
               </div>
@@ -275,14 +288,15 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
       >
         <div className="max-w-6xl mx-auto px-4 space-y-3 pb-[env(safe-area-inset-bottom)]">
           {/* Now (大きめ、上寄せ) */}
-          <div className="backdrop-blur-xl bg-white/10 text-white rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
+          <div className="backdrop-blur-md bg-black/60 text-white rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
             <div className="px-5 py-4 flex items-start gap-4">
               <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-yellow-300 text-black text-sm font-extrabold ring-4 ring-yellow-300/20">今</span>
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-white/80">現在進行中の予定</div>
-                <div className="text-lg md:text-xl font-bold tracking-tight truncate">{item.event || '(no title)'}</div>
-                <div className="text-xs md:text-sm text-white/80 mt-0.5">{timeStr}</div>
+                <div className="text-sm text-white/90">現在進行中の予定</div>
+                <div className="text-lg md:text-xl font-bold tracking-tight truncate text-white">{item.event || '(no title)'}</div>
+                <div className="text-xs md:text-sm text-white/85 mt-0.5">{timeStr}</div>
                 {item.description && <div className="text-xs md:text-sm text-white/80 mt-1 line-clamp-2">{item.description}</div>}
+                <ProgressBar start={item.start_time ?? null} end={item.end_time ?? null} />
               </div>
             </div>
           </div>
