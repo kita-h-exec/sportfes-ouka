@@ -19,7 +19,8 @@ export async function PUT(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const showAllOngoing = typeof body.showAllOngoing === 'boolean' ? body.showAllOngoing : undefined;
     const hiddenIds = Array.isArray(body.hiddenIds) ? body.hiddenIds : undefined;
-    const saved = writeNowPlayingSettings({ showAllOngoing, hiddenIds });
+    const showAllDayAsNow = typeof body.showAllDayAsNow === 'boolean' ? body.showAllDayAsNow : undefined;
+    const saved = writeNowPlayingSettings({ showAllOngoing, hiddenIds, showAllDayAsNow });
     return NextResponse.json({ ok: true, data: saved }, { status: 200 });
   } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     return NextResponse.json({ ok: false, error: e?.message || 'error' }, { status: 400 });

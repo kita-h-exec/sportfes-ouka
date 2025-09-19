@@ -388,6 +388,7 @@ export const getSchedules = async (): Promise<DirectusScheduleItem[]> => {
       fields: fullFields,
       sort: ['start_time'],
       limit: -1,
+      filter: { status: { _eq: 'published' } },
     })) as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     const msg = String(err?.message || err);
@@ -398,6 +399,7 @@ export const getSchedules = async (): Promise<DirectusScheduleItem[]> => {
           fields: minimalFields,
           sort: ['start_time'],
           limit: -1,
+          filter: { status: { _eq: 'published' } },
         })) as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
         usedFields = minimalFields;
       } catch (err2) {
@@ -413,7 +415,7 @@ export const getSchedules = async (): Promise<DirectusScheduleItem[]> => {
     // Raw fallback (SDK が空を返した / 権限差異調査用)
     try {
       const baseUrl = normalizeDirectusUrl(process.env.NEXT_PUBLIC_DIRECTUS_URL);
-      const rawUrl = `${baseUrl}/items/schedules?limit=-1&fields=*`;
+  const rawUrl = `${baseUrl}/items/schedules?limit=-1&fields=*&filter[status][_eq]=published`;
       const headers: Record<string,string> = { Accept: 'application/json' };
       if (process.env.DIRECTUS_STATIC_TOKEN) headers.Authorization = `Bearer ${process.env.DIRECTUS_STATIC_TOKEN}`;
       const res = await fetch(rawUrl, { headers, cache: 'no-store' });

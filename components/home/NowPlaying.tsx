@@ -214,15 +214,29 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
   function ProgressBar({ start, end }: { start?: string | null; end?: string | null }) {
     if (!start || !end) return null;
     let pct = 0;
+    let s = 0, e = 0, now = Date.now();
     try {
-      const s = new Date(start).getTime();
-      const e = new Date(end).getTime();
-      const now = Date.now();
+      s = new Date(start).getTime();
+      e = new Date(end).getTime();
       if (e > s) pct = Math.min(100, Math.max(0, ((now - s) / (e - s)) * 100));
     } catch {/* ignore */}
+    const labelStart = formatHM(start);
+    const labelEnd = formatHM(end);
+    const labelNow = formatHM(new Date(now).toISOString());
     return (
-      <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden" aria-hidden>
-        <div className="h-full bg-yellow-300" style={{ width: `${pct}%` }} />
+      <div className="mt-3">
+        <div className="flex justify-between text-[10px] text-white/75 mb-1">
+          <span>{labelStart}</span>
+          <span>{labelEnd}</span>
+        </div>
+        <div className="relative h-2 w-full rounded-full bg-white/10 overflow-hidden" aria-label={`開始 ${labelStart} / 現在 ${labelNow} / 終了 ${labelEnd}`}>
+          {/* 白が左から右へ満ちる */}
+          <div className="h-full bg-white" style={{ width: `${pct}%` }} />
+          {/* 現在位置マーカー（視認性のため黄色） */}
+          <div className="absolute top-0 bottom-0" style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}>
+            <div className="w-0.5 h-2 bg-yellow-300" />
+          </div>
+        </div>
       </div>
     );
   }

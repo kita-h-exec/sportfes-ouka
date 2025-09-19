@@ -73,6 +73,7 @@ export type NowPlayingSettings = {
   updatedAt: string; // ISO
   showAllOngoing: boolean;
   hiddenIds: Array<string | number>;
+  showAllDayAsNow: boolean; // 進行中の終日イベントを Now に含めるか
 };
 
 export function readNowPlayingSettings(): NowPlayingSettings {
@@ -84,19 +85,21 @@ export function readNowPlayingSettings(): NowPlayingSettings {
         updatedAt: typeof json.updatedAt === 'string' ? json.updatedAt : new Date().toISOString(),
         showAllOngoing: Boolean(json.showAllOngoing),
         hiddenIds: Array.isArray(json.hiddenIds) ? json.hiddenIds : [],
+        showAllDayAsNow: Boolean(json.showAllDayAsNow),
       } as NowPlayingSettings;
     }
   } catch { /* ignore */ }
-  return { updatedAt: new Date().toISOString(), showAllOngoing: false, hiddenIds: [] };
+  return { updatedAt: new Date().toISOString(), showAllOngoing: false, hiddenIds: [], showAllDayAsNow: false };
 }
 
-export function writeNowPlayingSettings(patch: Partial<Pick<NowPlayingSettings, 'showAllOngoing' | 'hiddenIds'>>) {
+export function writeNowPlayingSettings(patch: Partial<Pick<NowPlayingSettings, 'showAllOngoing' | 'hiddenIds' | 'showAllDayAsNow'>>) {
   ensureDir();
   const prev = readNowPlayingSettings();
   const next: NowPlayingSettings = {
     updatedAt: new Date().toISOString(),
     showAllOngoing: patch.showAllOngoing ?? prev.showAllOngoing,
     hiddenIds: Array.isArray(patch.hiddenIds) ? patch.hiddenIds.slice(0, 2000) : prev.hiddenIds,
+    showAllDayAsNow: patch.showAllDayAsNow ?? prev.showAllDayAsNow,
   };
   fs.writeFileSync(NOW_PLAYING_SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf-8');
   return next;

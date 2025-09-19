@@ -379,6 +379,7 @@ function SchedulesManagerCard({ password }: { password: string }) {
   const [npLoading, setNpLoading] = useState(false);
   const [showAllOngoing, setShowAllOngoing] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Array<string | number>>([]);
+  const [showAllDayAsNow, setShowAllDayAsNow] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -429,6 +430,7 @@ function SchedulesManagerCard({ password }: { password: string }) {
       if (res.ok && j?.ok) {
         setShowAllOngoing(Boolean(j.data?.showAllOngoing));
         setHiddenIds(Array.isArray(j.data?.hiddenIds) ? j.data.hiddenIds : []);
+        setShowAllDayAsNow(Boolean(j.data?.showAllDayAsNow));
       }
     } finally { setNpLoading(false); }
   }
@@ -610,7 +612,7 @@ function SchedulesManagerCard({ password }: { password: string }) {
       const res = await fetch('/api/now-playing', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-debug-password': password },
-        body: JSON.stringify({ showAllOngoing, hiddenIds }),
+        body: JSON.stringify({ showAllOngoing, hiddenIds, showAllDayAsNow }),
       });
       await res.json().catch(() => null);
     } finally { setNpLoading(false); }
@@ -697,6 +699,10 @@ function SchedulesManagerCard({ password }: { password: string }) {
         <label className="inline-flex items-center gap-2 text-sm">
           <input type="checkbox" checked={showAllOngoing} onChange={e => setShowAllOngoing(e.target.checked)} />
           <span>現在進行中の予定を全て表示（ON: 全件, OFF: 1件）</span>
+        </label>
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={showAllDayAsNow} onChange={e => setShowAllDayAsNow(e.target.checked)} />
+          <span>終日（当日）予定を「今」に含める</span>
         </label>
         <div className="text-xs text-slate-400">個別の表示切替（ON: 表示, OFF: 非表示）</div>
         <div className="grid md:grid-cols-2 gap-2">
