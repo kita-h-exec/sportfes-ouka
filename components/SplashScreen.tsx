@@ -41,7 +41,7 @@ export const SplashScreen = ({ onAnimationComplete }: { onAnimationComplete: () 
       // This exit animation will be triggered by AnimatePresence in the parent
       exit={{ opacity: 0, transition: { duration: 0.8 } }}
     >
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pointer-events-none">
         <LiquidEffect progress={progress} onReady={() => setIsLoaded(true)} />
       </div>
 

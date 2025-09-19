@@ -93,7 +93,6 @@ export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
 			</AnimatePresence>
 			{splashState === 'hide' && (
 				<>
-					<Header isScrolled={isScrolled} />
 															<div className="h-screen relative scroll-snap-section">
 																{/* ビューポート基準の上寄せ位置に現在進行中の予定を表示 */}
 																<NowPlaying isScrolled={isScrolled} />

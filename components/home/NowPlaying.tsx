@@ -188,9 +188,9 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: isScrolled ? 0 : 1, y: isScrolled ? 8 : 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed left-0 right-0 bottom-16 md:bottom-24 z-30"
+          className="fixed left-0 right-0 bottom-16 md:bottom-24 z-30 pointer-events-none"
         >
-          <div className="max-w-6xl mx-auto px-4 space-y-3 pb-[env(safe-area-inset-bottom)]">
+          <div className={`max-w-6xl mx-auto px-4 space-y-3 pb-[env(safe-area-inset-bottom)] ${isScrolled ? 'pointer-events-none' : 'pointer-events-auto'}`}>
             <div className="backdrop-blur-md bg-black/60 text-white rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
               <div className="px-5 py-4 flex items-start gap-4">
                 <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-slate-300 text-black text-sm font-extrabold ring-4 ring-slate-300/20">待</span>
@@ -219,7 +219,7 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
       s = new Date(start).getTime();
       e = new Date(end).getTime();
       if (e > s) pct = Math.min(100, Math.max(0, ((now - s) / (e - s)) * 100));
-    } catch {/* ignore */}
+    } catch { /* ignore */ }
     const labelStart = formatHM(start);
     const labelEnd = formatHM(end);
     const labelNow = formatHM(new Date(now).toISOString());
@@ -230,9 +230,7 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
           <span>{labelEnd}</span>
         </div>
         <div className="relative h-2 w-full rounded-full bg-white/10 overflow-hidden" aria-label={`開始 ${labelStart} / 現在 ${labelNow} / 終了 ${labelEnd}`}>
-          {/* 白が左から右へ満ちる */}
           <div className="h-full bg-white" style={{ width: `${pct}%` }} />
-          {/* 現在位置マーカー（視認性のため黄色） */}
           <div className="absolute top-0 bottom-0" style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}>
             <div className="w-0.5 h-2 bg-yellow-300" />
           </div>
@@ -251,7 +249,7 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: isScrolled ? 0 : 1, y: isScrolled ? 8 : 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed left-0 right-0 bottom-16 md:bottom-24 z-30"
+          className={`fixed left-0 right-0 bottom-16 md:bottom-24 z-30 ${isScrolled ? 'pointer-events-none' : 'pointer-events-auto'}`}
         >
           <div className="max-w-6xl mx-auto px-4 space-y-3 pb-[env(safe-area-inset-bottom)]">
             {list.length > 0 ? (
@@ -298,7 +296,7 @@ export default function NowPlaying({ isScrolled }: { isScrolled?: boolean }) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: isScrolled ? 0 : 1, y: isScrolled ? 8 : 0 }}
         transition={{ duration: 0.25 }}
-        className="fixed left-0 right-0 bottom-16 md:bottom-24 z-30"
+        className={`fixed left-0 right-0 bottom-16 md:bottom-24 z-30 ${isScrolled ? 'pointer-events-none' : 'pointer-events-auto'}`}
       >
         <div className="max-w-6xl mx-auto px-4 space-y-3 pb-[env(safe-area-inset-bottom)]">
           {/* Now (大きめ、上寄せ) */}
