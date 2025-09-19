@@ -23,6 +23,7 @@ export const Blocks = ({ initialBlocks }: BlocksProps) => {
 
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+  const animateTimerRef = useRef<number | null>(null);
 
   // Fetch only if not provided from server
   useEffect(() => {
@@ -42,14 +43,22 @@ export const Blocks = ({ initialBlocks }: BlocksProps) => {
   useEffect(() => { setMounted(true); }, []);
 
   const handlePaginate = useCallback((direction: number) => {
-    if (isAnimating || blocks.length <= 1) return;
+    if (blocks.length <= 1) return;
     setIsAnimating(true);
     setCurrentIndex(prev => (prev + direction + blocks.length) % blocks.length);
-    const t = setTimeout(() => setIsAnimating(false), 450);
-    return () => clearTimeout(t);
-  }, [isAnimating, blocks.length]);
+    if (animateTimerRef.current) {
+      clearTimeout(animateTimerRef.current);
+      animateTimerRef.current = null;
+    }
+    animateTimerRef.current = window.setTimeout(() => {
+      setIsAnimating(false);
+      animateTimerRef.current = null;
+    }, 450);
+  }, [blocks.length]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // スクロールスナップが横フリックを阻害するのを防ぐ
+    try { document.documentElement.classList.add('scroll-snap-disabled'); } catch {}
     touchStartX.current = e.touches[0].clientX;
     touchEndX.current = 0; // Reset on new touch
   };
@@ -86,7 +95,8 @@ export const Blocks = ({ initialBlocks }: BlocksProps) => {
       <h2 className="text-4xl font-bold text-center mb-12 text-white text-shadow-lg">ブロック紹介</h2>
 
       <div
-        className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center overflow-hidden select-none"
+        className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center overflow-hidden select-none touch-pan-y overscroll-contain"
+        style={{ touchAction: 'pan-y' }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -133,17 +143,20 @@ export const Blocks = ({ initialBlocks }: BlocksProps) => {
           );
         })}
 
-        {/* Gradient edges */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-background/80 to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-background/80 to-transparent" />
+  {/* Gradient edges (クリックを遮らない) */}
+  <div className="pointer-events-none absolute inset-y-6 left-0 w-16 bg-gradient-to-r from-background/80 to-transparent" />
+  <div className="pointer-events-none absolute inset-y-6 right-0 w-16 bg-gradient-to-l from-background/80 to-transparent" />
       </div>
 
-      <div className="mt-8 flex items-center gap-6">
+      <div className="mt-8 flex items-center gap-6 relative z-[60]">
         <button
           aria-label="前のブロック"
+          type="button"
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handlePaginate(-1); }}
           onClick={() => handlePaginate(-1)}
-          className="bg-white/60 hover:bg-white/80 dark:bg-white/30 dark:hover:bg-white/50 rounded-full p-3 shadow transition-colors disabled:opacity-40"
-          disabled={isAnimating}
+          aria-disabled={isAnimating}
+          className={`pointer-events-auto bg-white/60 hover:bg-white/80 dark:bg-white/30 dark:hover:bg-white/50 rounded-full p-3 shadow transition-colors ${isAnimating ? 'opacity-50' : ''}`}
+          style={{ touchAction: 'manipulation' }}
         >
           <ChevronLeft className="w-7 h-7" />
         </button>
@@ -154,9 +167,12 @@ export const Blocks = ({ initialBlocks }: BlocksProps) => {
         </div>
         <button
           aria-label="次のブロック"
+          type="button"
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handlePaginate(1); }}
           onClick={() => handlePaginate(1)}
-          className="bg-white/60 hover:bg-white/80 dark:bg-white/30 dark:hover:bg-white/50 rounded-full p-3 shadow transition-colors disabled:opacity-40"
-          disabled={isAnimating}
+          aria-disabled={isAnimating}
+          className={`pointer-events-auto bg-white/60 hover:bg-white/80 dark:bg-white/30 dark:hover:bg-white/50 rounded-full p-3 shadow transition-colors ${isAnimating ? 'opacity-50' : ''}`}
+          style={{ touchAction: 'manipulation' }}
         >
           <ChevronRight className="w-7 h-7" />
         </button>

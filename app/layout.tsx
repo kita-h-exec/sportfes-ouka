@@ -37,11 +37,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
 
+    // blocks/ と blocks/[slug] の時はスクロールスナップを明示的に無効化
+    try {
+      const isBlocks = pathname.startsWith('/blocks');
+      const html = document.documentElement;
+      if (isBlocks) html.classList.add('scroll-snap-disabled');
+      else html.classList.remove('scroll-snap-disabled');
+    } catch {}
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       unsubscribe();
     };
-  }, [scrollY]);
+  }, [scrollY, pathname]);
+
+  // blocks配下ではスクロールスナップを無効化してタップ/フリックの干渉を避ける
+  useEffect(() => {
+    const el = document.documentElement;
+    const shouldDisable = pathname.startsWith('/blocks');
+    if (shouldDisable) el.classList.add('scroll-snap-disabled');
+    else el.classList.remove('scroll-snap-disabled');
+  }, [pathname]);
 
   return (
     <html lang="ja">
