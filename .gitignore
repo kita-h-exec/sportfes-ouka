@@ -92,3 +92,5 @@ public/*.pdf
 
 data/current_schedule_override.json
 data/push_subscriptions.json
+data/push_logs/*
+!data/push_logs/.gitkeep

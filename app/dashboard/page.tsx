@@ -149,6 +149,13 @@ export default function DashboardPage() {
   const [logsOpen, setLogsOpen] = useState(false);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logs, setLogs] = useState<null | { size: number; max: number; entries: any[] }>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  // push logs
+  const [pushLogsOpen, setPushLogsOpen] = useState(false);
+  const [pushLogsLoading, setPushLogsLoading] = useState(false);
+  const [pushLogs, setPushLogs] = useState<null | { date: string; count: number; entries: any[] }>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [pushLogsDate, setPushLogsDate] = useState<string>('');
+  const [pushLogsLimit, setPushLogsLimit] = useState<number>(500);
+  const [pushLogsFilter, setPushLogsFilter] = useState<string>('');
 
   async function fetchLogs() {
     setLogsLoading(true);
@@ -164,6 +171,36 @@ export default function DashboardPage() {
       await exec({ action: 'clear_logs' });
       await fetchLogs();
     } finally { setLogsLoading(false); }
+  }
+
+  async function fetchPushLogs() {
+    setPushLogsLoading(true);
+    try {
+      const body: any = { action: 'push_logs', limit: pushLogsLimit }; // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (pushLogsDate) body.date = pushLogsDate;
+      const res = await fetch('/api/debug/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-debug-password': password },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.ok) setPushLogs({ date: json.data?.date, count: json.data?.count || 0, entries: json.data?.entries || [] });
+      else setPushLogs({ date: pushLogsDate || '(指定なし=今日)', count: 0, entries: [] });
+    } finally { setPushLogsLoading(false); }
+  }
+
+  async function clearPushLogs() {
+    setPushLogsLoading(true);
+    try {
+      const body: any = { action: 'clear_push_logs' }; // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (pushLogsDate) body.date = pushLogsDate;
+      await fetch('/api/debug/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-debug-password': password },
+        body: JSON.stringify(body),
+      });
+      await fetchPushLogs();
+    } finally { setPushLogsLoading(false); }
   }
 
   async function checkAuth(pw: string) {
@@ -339,6 +376,54 @@ export default function DashboardPage() {
                         <span className="shrink-0 px-1 rounded bg-slate-700/60 text-slate-200">{e.action}</span>
                         <span className="text-slate-400 break-all">{e.ip}</span>
                         {e.detail && <span className="text-slate-500">{JSON.stringify(e.detail)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Push通知ログ */}
+            <section className="space-y-3 bg-slate-800/60 border border-slate-700 rounded-xl p-5 shadow-inner xl:col-span-2">
+              <div className="flex items-center gap-4 flex-wrap">
+                <h2 className="text-lg font-semibold">Push 通知ログ</h2>
+                <button onClick={() => setPushLogsOpen(o => !o)} className="text-xs px-3 py-1 rounded border border-slate-600 hover:bg-slate-700">{pushLogsOpen ? '閉じる' : '開く'}</button>
+                {pushLogsOpen && (
+                  <>
+                    <div className="flex items-center gap-2 text-xs">
+                      <label className="flex items-center gap-1">
+                        <span className="text-slate-400">日付</span>
+                        <input type="date" value={pushLogsDate} onChange={e => setPushLogsDate(e.target.value)} className="bg-slate-900 border border-slate-600 rounded px-2 py-1" />
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <span className="text-slate-400">件数</span>
+                        <input type="number" min={50} max={5000} step={50} value={pushLogsLimit} onChange={e => setPushLogsLimit(parseInt(e.target.value || '500', 10))} className="w-24 bg-slate-900 border border-slate-600 rounded px-2 py-1" />
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <span className="text-slate-400">フィルタ</span>
+                        <input value={pushLogsFilter} onChange={e => setPushLogsFilter(e.target.value)} placeholder="kind:endpoint:..." className="bg-slate-900 border border-slate-600 rounded px-2 py-1" />
+                      </label>
+                    </div>
+                    <button onClick={fetchPushLogs} disabled={pushLogsLoading} className="text-xs px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-50">更新</button>
+                    <button onClick={clearPushLogs} disabled={pushLogsLoading} className="text-xs px-3 py-1 rounded bg-red-700 hover:bg-red-600 disabled:opacity-50">クリア</button>
+                  </>
+                )}
+              </div>
+              {pushLogsOpen && (
+                <div className="space-y-2">
+                  <div className="text-[10px] text-slate-500">今日または指定日の `data/push_logs/notify-YYYY-MM-DD.log` を読み込みます。</div>
+                  <div className="h-80 overflow-auto rounded border border-slate-700 bg-slate-900/70 p-2 text-[11px] font-mono leading-relaxed">
+                    {pushLogsLoading && <div className="text-slate-500">読み込み中…</div>}
+                    {!pushLogsLoading && (!pushLogs?.entries || pushLogs.entries.length === 0) && <div className="text-slate-500">ログなし</div>}
+                    {!pushLogsLoading && pushLogs?.entries?.filter((e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+                      if (!pushLogsFilter) return true;
+                      try { return JSON.stringify(e).toLowerCase().includes(pushLogsFilter.toLowerCase()); } catch { return true; }
+                    }).map((e: any, i: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                      <div key={i} className="flex gap-2 py-0.5 border-b border-slate-800 last:border-b-0 items-start">
+                        <span className="text-slate-500 shrink-0">{e.ts}</span>
+                        <span className="shrink-0 px-1 rounded bg-slate-700/60 text-slate-200">{e.kind}</span>
+                        <span className="text-slate-400 break-all">{e.endpoint || e.title || ''}</span>
+                        <span className="text-slate-500">{e.error ? String(e.error) : ''}</span>
                       </div>
                     ))}
                   </div>

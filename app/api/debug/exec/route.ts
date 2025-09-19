@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from '@/lib/webpush';
+import { logNotify } from '@/lib/notifyLogger';
 import { listSubscriptions, backendKind } from '@/lib/pushStore';
 
 // この API はデバッグ用途: Directus のキャッシュクリアなどサーバー側で安全にトークンを扱う
@@ -27,6 +28,8 @@ interface SetAdminTokenRequest extends ExecRequestBase { action: 'set_admin_toke
 interface ClearAdminTokenRequest extends ExecRequestBase { action: 'clear_admin_token'; }
 interface LogsRequest extends ExecRequestBase { action: 'logs'; }
 interface ClearLogsRequest extends ExecRequestBase { action: 'clear_logs'; }
+interface PushLogsRequest extends ExecRequestBase { action: 'push_logs'; date?: string; limit?: number; }
+interface ClearPushLogsRequest extends ExecRequestBase { action: 'clear_push_logs'; date?: string; }
 interface PushNotifyRequest extends ExecRequestBase {
   action: 'push_notify';
   title?: string;
@@ -46,6 +49,8 @@ type ExecRequest =
   | ClearAdminTokenRequest
   | LogsRequest
   | ClearLogsRequest
+  | PushLogsRequest
+  | ClearPushLogsRequest
   | PushNotifyRequest
   | PushStatsRequest;
 
@@ -177,6 +182,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, status: 200, data: { message: 'logs cleared' }, elapsedMs: Date.now() - started });
   }
 
+  // --- Push通知ファイルログの取得 ---
+  if (payload.action === 'push_logs') {
+    const { date, limit = 500 } = payload as PushLogsRequest;
+    try {
+      const mod = await import('@/lib/notifyLogger');
+      const pathMod = await import('path');
+      const fs = await import('fs');
+      const baseDir = process.env.NOTIFY_LOG_DIR || pathMod.join(process.cwd(), 'data', 'push_logs');
+      const d = date ? new Date(date) : new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const file = pathMod.join(baseDir, `notify-${yyyy}-${mm}-${dd}.log`);
+      let entries: any[] = [];
+      if (fs.existsSync(file)) {
+        const raw = fs.readFileSync(file, 'utf-8');
+        const lines = raw.split(/\n+/).filter(Boolean);
+        const tail = lines.slice(-Math.max(1, Math.min(5000, limit)));
+        for (const line of tail) {
+          try { entries.push(JSON.parse(line)); } catch {/* ignore malformed */}
+        }
+      }
+      // 新しい順に
+      entries.reverse();
+      return NextResponse.json({ ok: true, status: 200, data: { date: `${yyyy}-${mm}-${dd}`, file, count: entries.length, entries }, elapsedMs: Date.now() - started });
+    } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      return jsonError(`push_logs error: ${e?.message || e}`, 500);
+    }
+  }
+
+  // --- Push通知ファイルログの削除（当日または指定日）---
+  if (payload.action === 'clear_push_logs') {
+    try {
+      const pathMod = await import('path');
+      const fs = await import('fs');
+      const baseDir = process.env.NOTIFY_LOG_DIR || pathMod.join(process.cwd(), 'data', 'push_logs');
+      const d = (payload as ClearPushLogsRequest).date ? new Date((payload as ClearPushLogsRequest).date as string) : new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const file = pathMod.join(baseDir, `notify-${yyyy}-${mm}-${dd}.log`);
+      if (fs.existsSync(file)) fs.rmSync(file, { force: true });
+      return NextResponse.json({ ok: true, status: 200, data: { removed: file }, elapsedMs: Date.now() - started });
+    } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      return jsonError(`clear_push_logs error: ${e?.message || e}`, 500);
+    }
+  }
+
   if (payload.action === 'custom') {
     if (process.env.DEBUG_ENABLE_CUSTOM !== '1') return jsonError('Custom exec disabled');
     const { url, method = 'GET' } = payload;
@@ -237,15 +290,22 @@ export async function POST(req: NextRequest) {
     try {
       const subs = await listSubscriptions();
       let sent = 0;
+      let failed = 0;
       let removed = 0;
+
+      // ファイルログ: 開始
+      await logNotify({ kind: 'send:start', count: subs.length, title, bodyLen: typeof body === 'string' ? body.length : undefined });
       await Promise.all(
         subs.map(async (sub: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
           try {
             await webpush.sendNotification(sub, JSON.stringify({ title, body, url, tag, icon, badge }));
             sent += 1;
+            await logNotify({ kind: 'send:success', endpoint: sub?.endpoint });
           } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             // 購読無効 (410/404) の場合クリーンアップ (Best-effort)
             const status = (e && e.statusCode) || (e?.status);
+            failed += 1;
+            await logNotify({ kind: 'send:failure', endpoint: sub?.endpoint, error: e?.message || String(e), status });
             if (status === 410 || status === 404) {
               try {
                 const mod = await import('@/lib/pushStore');
@@ -260,8 +320,10 @@ export async function POST(req: NextRequest) {
           }
         })
       );
-      pushLog({ ts: new Date().toISOString(), action: 'push_notify', ip: clientIp(req), detail: { sent, removed } });
-      return NextResponse.json({ ok: true, status: 200, data: { sent, removed }, elapsedMs: Date.now() - started });
+      // ファイルログ: サマリー
+      await logNotify({ kind: 'send:summary', total: subs.length, sent, failed, removed });
+      pushLog({ ts: new Date().toISOString(), action: 'push_notify', ip: clientIp(req), detail: { sent, removed, failed } });
+      return NextResponse.json({ ok: true, status: 200, data: { sent, failed, removed }, elapsedMs: Date.now() - started });
     } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       pushLog({ ts: new Date().toISOString(), action: 'push_notify_error', ip: clientIp(req), detail: { error: e?.message || String(e) } });
       return jsonError('Push send error', 500);
