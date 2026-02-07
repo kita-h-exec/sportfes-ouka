@@ -1,0 +1,121 @@
+"use client";
+
+import { AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import Header from './Header';
+import { SplashScreen } from '../SplashScreen';
+import { CountdownTimer } from './CountdownTimer';
+import { Schedule } from './Schedule';
+import { Contents } from './Contents';
+import { Blocks } from './Blocks';
+import NowPlaying from './NowPlaying';
+
+// Home ロジックをサーバー/クライアント分離したい場合のクライアント側コンテナ。
+// 現状 <ContentsServer> など存在しない幽霊参照による警告を避けるためここで明示的に正しい構成を定義。
+
+interface Block { slug: string; name: string; color: string; text_color: string }
+
+export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {
+	const [splashState, setSplashState] = useState<'unknown' | 'show' | 'hide'>('unknown');
+	const isLoading = splashState === 'show';
+	const [isScrolled, setIsScrolled] = useState(false);
+
+	useEffect(() => { window.scrollTo(0,0); }, []);
+
+	// ローカルタイムの YYYY-MM-DD を返す（UTCズレを避ける）
+	const getTodayLocal = () => {
+		const d = new Date();
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${y}-${m}-${day}`;
+	};
+
+	useEffect(() => {
+		const decide = () => {
+			try {
+				const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || // @ts-ignore
+					(navigator as any).standalone === true; // eslint-disable-line @typescript-eslint/no-explicit-any
+				if (isStandalone) {
+					// PWA: 1日1回のみ表示
+					const today = getTodayLocal();
+					const lastShown = localStorage.getItem('splashShownOn_pwa');
+					if (lastShown === today) setSplashState('hide');
+					else setSplashState('show');
+				} else {
+					// Web（非PWA）: これまで通り初回のみ表示
+					if (localStorage.getItem('splashSeen_v1_web')) setSplashState('hide');
+					else setSplashState('show');
+				}
+			} catch { setSplashState('hide'); }
+		};
+		decide();
+	}, []);
+
+	useEffect(() => {
+		if (splashState === 'show') document.body.classList.add('splash-active');
+		else document.body.classList.remove('splash-active');
+	}, [splashState]);
+
+	useEffect(() => {
+		if (isLoading) return;
+		const handleScroll = () => setIsScrolled(window.scrollY > 50);
+		const disableSnapOnScroll = () => document.documentElement.classList.add('scroll-snap-disabled');
+		window.addEventListener('scroll', handleScroll);
+		window.addEventListener('scroll', disableSnapOnScroll, { once: true });
+		return () => {
+			window.removeEventListener('scroll', handleScroll);
+			window.removeEventListener('scroll', disableSnapOnScroll);
+		};
+	}, [isLoading]);
+
+	if (splashState === 'unknown') return null;
+
+	return (
+		<>
+			<AnimatePresence>
+				{isLoading && (
+					<SplashScreen onAnimationComplete={() => {
+						try {
+							// PWA: 本日表示済みの日付を保存
+							const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || // @ts-ignore
+								(navigator as any).standalone === true; // eslint-disable-line @typescript-eslint/no-explicit-any
+							if (isStandalone) {
+								localStorage.setItem('splashShownOn_pwa', getTodayLocal());
+							} else {
+								// Web: 従来通り一度だけ
+								localStorage.setItem('splashSeen_v1_web','1');
+							}
+						} catch {}
+						setSplashState('hide');
+					}} />
+				)}
+			</AnimatePresence>
+			{splashState === 'hide' && (
+				<>
+															<div className="h-screen relative scroll-snap-section">
+																{/* ビューポート基準の上寄せ位置に現在進行中の予定を表示 */}
+																<NowPlaying isScrolled={isScrolled} />
+															</div>
+					<div className="relative z-10 pt-32 pb-10 scroll-snap-section">
+						<div className="container mx-auto px-4 space-y-12">
+							<CountdownTimer
+								targetDate="2025-09-19T08:30:00"
+								events={[
+									{ date: '2025-09-19', message: 'うんどう会 1日目！' },
+									{ date: '2025-09-20', message: 'うんどう会 2日目！' },
+								]}
+								endedMessage="うんどう会は終了しました"
+							/>
+							<Schedule />
+							<Contents />
+							<Blocks initialBlocks={initialBlocks} />
+						</div>
+					</div>
+				</>
+			)}
+		</>
+	);
+}
+
+export default HomeClient;

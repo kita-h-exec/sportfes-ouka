@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import directus from '@/lib/directus';
-import { readItems } from '@directus/sdk';
+// 直接クライアントから Directus を叩くと Public ロール権限不足で失敗する場合があるため
+// サーバー側トークンを使う /api/schedules 経由に切り替え
 
 interface ScheduleItem {
   start_time: string;
   end_time: string;
   event: string;
   description: string;
+  is_all_day?: boolean;
 }
 
 const Calendar = ({ onDateSelect, selectedDate }: { onDateSelect: (date: Date) => void, selectedDate: Date }) => {
@@ -82,32 +83,51 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
     return () => clearInterval(timer);
   }, []);
 
+  const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const targetKey = key(date);
   const scheduleForDate = schedules
     .filter(item => {
-      const itemDate = new Date(item.start_time);
-      return itemDate.toDateString() === date.toDateString();
+      // start_timeがなければend_timeで判定
+      const itemDate = item.start_time ? new Date(item.start_time) : (item.end_time ? new Date(item.end_time) : null);
+      if (!itemDate) return false;
+      return key(itemDate) === targetKey;
     })
-    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    .sort((a, b) => {
+      if (a.is_all_day && !b.is_all_day) return -1;
+      if (!a.is_all_day && b.is_all_day) return 1;
+      // start_timeがなければend_timeで比較
+      const aTime = a.start_time ? new Date(a.start_time).getTime() : (a.end_time ? new Date(a.end_time).getTime() : 0);
+      const bTime = b.start_time ? new Date(b.start_time).getTime() : (b.end_time ? new Date(b.end_time).getTime() : 0);
+      return aTime - bTime;
+    });
 
   const formatTime = (isoString: string) => {
+    if (!isoString) return '';
     const d = new Date(isoString);
     return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
   const calculateDuration = (start: string, end: string) => {
     if (!start || !end) return 0;
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDate = start ? new Date(start) : null;
+    const endDate = end ? new Date(end) : null;
+    if (!startDate || !endDate) return 0;
     const diffMs = endDate.getTime() - startDate.getTime();
     return Math.round(diffMs / 60000);
   };
 
   const isOngoing = (start: string, end: string) => {
-    if (!now || !start || !end) return false;
-    const startTime = new Date(start).getTime();
-    const endTime = new Date(end).getTime();
+    if (!now || (!start && !end)) return false;
+    const startTime = start ? new Date(start).getTime() : null;
+    const endTime = end ? new Date(end).getTime() : null;
     const nowTime = now.getTime();
-    return nowTime >= startTime && nowTime <= endTime;
+    if (startTime && endTime) {
+      return nowTime >= startTime && nowTime <= endTime;
+    } else if (!startTime && endTime) {
+      // 終了時間だけある場合、終了前なら進行中とみなす
+      return nowTime <= endTime;
+    }
+    return false;
   };
 
   return (
@@ -128,22 +148,41 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
         >
           {scheduleForDate.length > 0 ? (
             scheduleForDate.map((item, index) => {
-              const duration = calculateDuration(item.start_time, item.end_time);
-              const ongoing = isOngoing(item.start_time, item.end_time);
-              const borderColor = ongoing ? 'border-yellow-400' : 'border-fuchsia-400';
+              const isAllDay = item.is_all_day;
+              const duration = !isAllDay ? calculateDuration(item.start_time, item.end_time) : 0;
+              const ongoing = !isAllDay && isOngoing(item.start_time, item.end_time);
+              
+              const baseStyles = "p-4 rounded-lg border-l-4 text-shadow-sm transition-colors duration-300";
+              const borderColor = ongoing ? 'border-yellow-400' : (isAllDay ? 'border-sky-400' : 'border-fuchsia-400');
+              const backgroundStyle = isAllDay ? 'bg-black/10' : 'bg-black/20';
 
               return (
               <motion.li 
                 key={index} 
-                className={`p-4 rounded-lg bg-black/20 border-l-4 ${borderColor} text-shadow-sm transition-colors duration-300`}
+                className={`${baseStyles} ${borderColor} ${backgroundStyle}`}
                 variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
               >
                 <p className="font-bold text-xl">{item.event}</p>
                 <div className="flex items-center text-sm text-gray-200">
-                  <span>{formatTime(item.start_time)}</span>
-                  {item.end_time && <span className="mx-1">~</span>}
-                  {item.end_time && <span>{formatTime(item.end_time)}</span>}
-                  {duration > 0 && <span className="ml-4 text-xs text-gray-400">({duration}分)</span>}
+                  {isAllDay ? (
+                    <span className="font-bold text-sky-300">終日</span>
+                  ) : (
+                    <>
+                      {item.start_time && (
+                        <>
+                          <span>{formatTime(item.start_time)}</span>
+                          {item.end_time && <span className="mx-1">~</span>}
+                          {item.end_time && <span>{formatTime(item.end_time)}</span>}
+                        </>
+                      )}
+                      {!item.start_time && item.end_time && (
+                        <>
+                          <span>{formatTime(item.end_time)}</span>
+                        </>
+                      )}
+                      {duration > 0 && <span className="ml-4 text-xs text-gray-400">({duration}分)</span>}
+                    </>
+                  )}
                 </div>
                 <p className="text-base mt-1">{item.description}</p>
               </motion.li>
@@ -159,15 +198,19 @@ const ScheduleDisplay = ({ date, schedules }: { date: Date, schedules: ScheduleI
 
 async function getSchedules(): Promise<ScheduleItem[]> {
   try {
-    const response = await directus.request(
-      readItems('schedules', {
-        fields: ['start_time', 'end_time', 'event', 'description'],
-        sort: ['start_time'],
-      })
-    );
-    return response as ScheduleItem[];
+    const res = await fetch('/api/schedules', { cache: 'no-store' });
+    if (!res.ok) {
+      console.error('Failed to fetch /api/schedules', res.status);
+      return [];
+    }
+    const json = await res.json();
+    if (!json.ok) {
+      console.error('API error /api/schedules', json.error);
+      return [];
+    }
+    return json.items as ScheduleItem[];
   } catch (error) {
-    console.error("Failed to fetch schedules:", error);
+    console.error('Failed to fetch schedules:', error);
     return [];
   }
 }

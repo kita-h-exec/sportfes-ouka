@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 interface BlockInfo {
-  id: string;
+  slug: string;
   name: string;
 }
 
@@ -14,21 +14,27 @@ interface BlockNavigationProps {
 
 const BlockNavigation = ({ prevBlock, nextBlock }: BlockNavigationProps) => {
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md mx-auto z-50 flex justify-between px-4">
-      <Link href={`/blocks/${prevBlock.id}`}>
-        <span className="px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg transition-transform hover:scale-110 active:scale-95 text-gray-800 font-bold">
-          ← {prevBlock.name}
-        </span>
+    <div className="flex justify-center items-center flex-nowrap gap-x-4 px-4 py-12">
+      <Link
+        href={`/blocks/${prevBlock.slug}`}
+        className="whitespace-nowrap rounded-full bg-white/90 px-3 py-2 text-xs shadow-lg backdrop-blur-sm transition-transform hover:scale-110 active:scale-95 sm:px-4 sm:text-sm font-bold text-gray-800"
+        style={{ touchAction: 'manipulation', pointerEvents: 'auto' }}
+      >
+        ← {prevBlock.name}
       </Link>
-      <Link href="/blocks">
-        <span className="px-6 py-3 rounded-full bg-blue-500/90 text-white backdrop-blur-sm shadow-lg transition-transform hover:scale-110 active:scale-95 font-bold">
-          ブロック一覧
-        </span>
+      <Link
+        href="/blocks"
+        className="whitespace-nowrap rounded-full bg-blue-500/90 px-4 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110 active:scale-95 sm:px-6 sm:py-3 sm:text-base"
+        style={{ touchAction: 'manipulation', pointerEvents: 'auto' }}
+      >
+        ブロック一覧
       </Link>
-      <Link href={`/blocks/${nextBlock.id}`}>
-        <span className="px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg transition-transform hover:scale-110 active:scale-95 text-gray-800 font-bold">
-          {nextBlock.name} →
-        </span>
+      <Link
+        href={`/blocks/${nextBlock.slug}`}
+        className="whitespace-nowrap rounded-full bg-white/90 px-3 py-2 text-xs shadow-lg backdrop-blur-sm transition-transform hover:scale-110 active:scale-95 sm:px-4 sm:text-sm font-bold text-gray-800"
+        style={{ touchAction: 'manipulation', pointerEvents: 'auto' }}
+      >
+        {nextBlock.name} →
       </Link>
     </div>
   );

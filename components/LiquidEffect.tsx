@@ -107,15 +107,15 @@ const ShaderPlane = ({ texture, progress }: { texture: THREE.Texture, progress: 
 
   useFrame(({ clock }) => {
     if (materialRef.current) {
-      materialRef.current.uniforms.uTime.value = clock.getElapsedTime();
-      materialRef.current.uniforms.uProgress.value = progress.get();
+      materialRef.current.uTime = clock.getElapsedTime();
+      materialRef.current.uProgress = progress.get();
     }
   });
 
   return (
     <mesh>
       <planeGeometry args={[10, 10, 128, 128]} />
-      {/* @ts-expect-error - Custom shader material type not recognized by TypeScript */}
+      {/* @ts-expect-error: Custom material type */}
       <liquidGlassFinalMaterial ref={materialRef} uTexture={texture} transparent={true} />
     </mesh>
   );

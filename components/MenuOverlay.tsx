@@ -10,8 +10,8 @@ const MenuOverlay = () => {
   const { isMenuOpen, toggleMenu } = useMenu();
 
   const menuVariants = {
-    hidden: { opacity: 0, transition: { duration: 0.3, ease: "easeInOut" as const } },
-    visible: { opacity: 1, transition: { duration: 0.3, ease: "easeInOut" as const } },
+    hidden: { opacity: 0, transition: { duration: 0.3 } },
+    visible: { opacity: 1, transition: { duration: 0.3 } },
   };
 
   const linkContainerVariants = {
@@ -27,7 +27,7 @@ const MenuOverlay = () => {
 
   const linkVariants = {
     hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" as const } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   };
 
   return (
@@ -54,10 +54,16 @@ const MenuOverlay = () => {
                 <Link href="/" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">ホーム</Link>
               </motion.li>
               <motion.li variants={linkVariants}>
+                <Link href="/announcements" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">お知らせ</Link>
+              </motion.li>
+              <motion.li variants={linkVariants}>
+                <Link href="/greetings" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">挨拶</Link>
+              </motion.li>
+              <motion.li variants={linkVariants}>
                 <Link href="/blocks" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">ブロック紹介</Link>
               </motion.li>
               <motion.li variants={linkVariants}>
-                <Link href="/contents" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">企画紹介</Link>
+                <Link href="/program" onClick={toggleMenu} className="text-5xl font-extrabold text-white hover:text-fuchsia-400 transition-colors">プログラム</Link>
               </motion.li>
             </ul>
           </motion.div>
