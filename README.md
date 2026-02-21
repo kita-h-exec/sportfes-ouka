@@ -22,20 +22,59 @@
 
 ```mermaid
 flowchart LR
-  User[閲覧者/生徒/保護者] -->|閲覧| Web[Next.js App]
-  User -->|通知許可| PWA[Service Worker / PWA]
-  PWA -->|Push購読| API[Next.js API]
+  %% Users
+  User[閲覧者・生徒・保護者]
+  Staff[運営者]
 
+  %% Cloudflare
+  Tunnel[Cloudflare Tunnel]
+
+  %% Docker Host
+  subgraph DockerHost[Docker Host]
+
+    subgraph FrontendContainer[frontend container]
+      Web[Next.js App]
+      PWA[Service Worker PWA]
+    end
+
+    subgraph BackendContainer[api container]
+      API[Next.js API]
+    end
+
+    subgraph CMSContainer[cms container]
+      Directus[Directus CMS]
+    end
+
+    subgraph DBContainer[db container]
+      DB[(PostgreSQL)]
+    end
+
+    subgraph StoreVolume[volume]
+      Store[(data storage volume)]
+    end
+
+  end
+
+  %% External Services
+  Push[Web Push Service]
+  Gemini[Google Gemini API]
+
+  %% Public Access via Cloudflare Tunnel
+  User -->|HTTPS| Tunnel
+  Staff -->|HTTPS| Tunnel
+
+  Tunnel --> Web
+  Tunnel --> API
+  Tunnel --> Directus
+
+  %% Internal Connections
   Web -->|API呼び出し| API
-  API -->|CMS取得| Directus[(Directus CMS)]
-  API -->|ファイル/メモリ保存| Store[(data/ ストレージ)]
-
-  API -->|Web Push送信| Push[Push Service]
-  API -->|AI質問| Gemini[Google Gemini API]
-  Gemini -->|回答| API
-
-  Staff[運営者] -->|更新| Directus
-  Staff -->|緊急操作| API
+  API -->|データ取得| Directus
+  Directus -->|DBアクセス| DB
+  API -->|ローカルデータ取得| Store
+  API -->|プッシュ通知| Push
+  API -->|AIリクエスト| Gemini
+  Gemini -->|回答返答| API
 ```
 
 ---
