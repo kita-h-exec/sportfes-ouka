@@ -24,7 +24,7 @@
 flowchart LR
   %% Users
   User[閲覧者・生徒・保護者]
-  Staff[運営者]
+  Staff[運営]
 
   %% Cloudflare
   Tunnel[Cloudflare Tunnel]
