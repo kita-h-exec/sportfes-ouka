@@ -41,7 +41,7 @@ export default function HomeClient({ blocks }: { blocks: Block[] }) {
     const disableSnapOnScroll = () => {
       setTimeout(() => {
         document.documentElement.classList.add('scroll-snap-disabled');
-      }, 200); // Add a 200ms delay
+      }, 200);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -49,7 +49,6 @@ export default function HomeClient({ blocks }: { blocks: Block[] }) {
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      // No need to remove the once listener, but it's good practice
       window.removeEventListener('scroll', disableSnapOnScroll);
     };
   }, []);
@@ -89,7 +88,6 @@ export default function HomeClient({ blocks }: { blocks: Block[] }) {
           <div className="relative z-10 pt-32 pb-10 scroll-snap-section">
             <div className="container mx-auto px-4 space-y-12">
               <CountdownTimer targetDate="2025-09-19T15:40:00" />
-              {/* EmergencyBar is now in Header */}
               <Schedule />
               <Contents />
               <Blocks blocks={blocks} />

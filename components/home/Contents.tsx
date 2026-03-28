@@ -1,4 +1,3 @@
-// client component (kept) but dataを内部API経由で取得しCORS/localhost問題を軽減
 "use client";
 import Link from 'next/link';
 import { motion } from 'framer-motion';
