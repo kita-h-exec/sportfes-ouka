@@ -2,16 +2,13 @@
 
 import { useMenu } from '@/components/useMenu';
 
-// isScrolledのみを受け取るように変更
 interface HamburgerMenuProps {
   isScrolled: boolean;
 }
 
 const HamburgerMenu = ({ isScrolled }: HamburgerMenuProps) => {
-  // useMenuフックを直接呼び出す
   const { isMenuOpen, toggleMenu } = useMenu();
 
-  // isMenuOpenも色の判定に加える
   const iconColor = isScrolled || isMenuOpen ? "text-gray-800" : "text-white";
 
   return (

@@ -10,9 +10,6 @@ import { Contents } from './Contents';
 import { Blocks } from './Blocks';
 import NowPlaying from './NowPlaying';
 
-// Home ロジックをサーバー/クライアント分離したい場合のクライアント側コンテナ。
-// 現状 <ContentsServer> など存在しない幽霊参照による警告を避けるためここで明示的に正しい構成を定義。
-
 interface Block { slug: string; name: string; color: string; text_color: string }
 
 export function HomeClient({ initialBlocks }: { initialBlocks?: Block[] }) {

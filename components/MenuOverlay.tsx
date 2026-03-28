@@ -2,11 +2,9 @@
 
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMenu } from '@/components/useMenu'; // useMenuフックをインポート
+import { useMenu } from '@/components/useMenu';
 
-// propsを受け取らないように変更
 const MenuOverlay = () => {
-  // useMenuフックを直接呼び出す
   const { isMenuOpen, toggleMenu } = useMenu();
 
   const menuVariants = {
